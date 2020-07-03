@@ -1,0 +1,950 @@
+---
+title: "Europe and Asia"
+author: "Gabriela Lozano"
+date: "6/29/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Covid Cases in Europe and Asia
+
+This document includes code for plots and data management of different values and the process that went to it.
+It includes Europe and Asia data in relation to weather and gdp.
+##Import Libraries
+
+```{r}
+library(ggplot2)
+library(ggpubr)
+library(dplyr)
+library(weathermetrics)
+```
+
+## Read Data and merge them together
+
+```{r}
+#Read in data
+covid_cases = read.csv("https://covid.ourworldindata.org/data/owid-covid-data.csv") # Read-in data
+weather= read.csv("Weather_Data_Cleaned.csv")
+
+
+#Change the name of the column
+names(weather)[names(weather) == "CTRY"] <- "location"
+weather = merge(weather, covid_cases, by="location")
+
+#Add a column with the month
+weather$month = gsub("2020-", "", weather$date) # Remove year and hyphen
+weather$month = gsub("-", "", weather$month) # remove extra hyphen
+weather$month = substr(weather$month, 1, nchar(weather$month) - 2) # remove day of month
+
+
+#Change weather to C instead of F
+weather$MAR = fahrenheit.to.celsius(weather$MAR)
+weather$APR = fahrenheit.to.celsius(weather$APR)
+weather$MAY = fahrenheit.to.celsius(weather$MAY)
+
+```
+After we do that we take the values from Europe.
+## Getting amount of cases per month from Europe data
+```{r}
+#Make dataframe
+europedf = weather %>% filter(continent == "Europe")
+
+# Add Frequency per months of Europe
+#March
+europemar = europedf %>% filter(month == "03")
+freqdf = data.frame(tapply(europemar$new_cases, europemar$location, FUN=sum) )
+freqdf <- tibble::rownames_to_column(freqdf, "VALUE")
+names(freqdf)[1] <-"location"
+names(freqdf)[2] <- "frequency"
+
+freqddf =data.frame(tapply(europemar$new_deaths, europemar$location, FUN=sum) )
+freqddf = tibble::rownames_to_column(freqddf, "VALUE")
+names(freqddf)[1] <-"location"
+names(freqddf)[2] <- "deathfreq"
+Efreqdf = merge(freqdf, freqddf, by="location")
+europemar = merge(europemar, Efreqdf, by="location")
+
+#April
+europeapr = europedf %>% filter(month == "04")
+freqdf = data.frame(tapply(europeapr$new_cases, europeapr$location, FUN=sum) )
+freqdf <- tibble::rownames_to_column(freqdf, "VALUE")
+names(freqdf)[1] <-"location"
+names(freqdf)[2] <- "frequency"
+
+freqddf =data.frame(tapply(europeapr$new_deaths, europeapr$location, FUN=sum) )
+freqddf = tibble::rownames_to_column(freqddf, "VALUE")
+names(freqddf)[1] <-"location"
+names(freqddf)[2] <- "deathfreq"
+Efreqdf = merge(freqdf, freqddf, by="location")
+europeapr = merge(europeapr, Efreqdf, by="location")
+
+#May
+europemay = europedf %>% filter(month == "05")
+freqdf = data.frame(tapply(europemay$new_cases, europemay$location, FUN=sum) )
+freqdf <- tibble::rownames_to_column(freqdf, "VALUE")
+names(freqdf)[1] <-"location"
+names(freqdf)[2] <- "frequency"
+
+freqddf =data.frame(tapply(europemay$new_deaths, europemay$location, FUN=sum) )
+freqddf = tibble::rownames_to_column(freqddf, "VALUE")
+names(freqddf)[1] <-"location"
+names(freqddf)[2] <- "deathfreq"
+Efreqdf = merge(freqdf, freqddf, by="location")
+europemay = merge(europemay, Efreqdf, by="location")
+```
+Then we can get the frequencies for each month and afterwards we can plot these values. We include both Temperature and GDP in these graphs.
+##March in Europe
+```{r, echo=FALSE}
+#Getting rates for cases and deaths and added the log
+MarMaxE = europemar[europemar$date == max(europemar$date),]
+MarMaxE$freqpop = MarMaxE$frequency/MarMaxE$population
+MarMaxE$freqdead = MarMaxE$deathfreq/MarMaxE$population
+MarMaxE$freqpoplog = log(MarMaxE$freqpop)
+MarMaxE$freqdeadlog = log(MarMaxE$freqdead)
+
+
+#Temperature
+ggscatter(MarMaxE, x = 'MAR', y ='freqpoplog',
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "Temperature", ylab = "Rate of Cases in March",
+          title="Rate of Cases in March in European Countries",
+          label="location", repel=TRUE)
+
+ggscatter(MarMaxE, x = 'MAR', y ='freqdeadlog',
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "Temperature", ylab = "Rate of Deaths in March",
+          title="Rate of Deaths in March in European Countries",
+          label="location", repel=TRUE)
+#GDP
+ggscatter(MarMaxE, x = 'gdp_per_capita', y ='freqpoplog',
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "GDP", ylab = "Rate of Cases in March",
+          title="Rate of Cases in March in European Countries",
+          label="location", repel=TRUE)
+
+ggscatter(MarMaxE, x = 'gdp_per_capita', y ='freqdeadlog',
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "GDP", ylab = "Rate of Deaths in March",
+          title="Rate of Deaths in March in European Countries",
+          label="location", repel=TRUE)
+```
+Now we do something similar for both April and May
+
+##April in Europe
+```{r}
+AprMaxE = europeapr[europeapr$date == max(europeapr$date),]
+AprMaxE$freqpop = AprMaxE$frequency/AprMaxE$population
+AprMaxE$freqdead = AprMaxE$deathfreq/AprMaxE$population
+AprMaxE$freqpoplog = log(AprMaxE$freqpop)
+AprMaxE$freqdeadlog = log(AprMaxE$freqdead)
+
+#Temperature
+ggscatter(AprMaxE, x = 'APR', y ='freqpoplog',
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "Temperature", ylab = "Rate of Cases in April",
+          title="Rate of Cases in April in European Countries",
+          label="location", repel=TRUE)
+
+ggscatter(AprMaxE, x = 'APR', y ='freqdeadlog',
+          xlim =c(-5,25),
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "Temperature", ylab = "Rate of Deaths in April",
+          title="Rate of Deaths in April in European Countries",
+          label="location", repel=TRUE)
+
+#GDP
+ggscatter(AprMaxE, x = 'gdp_per_capita', y ='freqpoplog',
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "GDP", ylab = "Rate of Cases in April",
+          title="Rate of Cases in April in European Countries",
+          label="location", repel=TRUE)
+
+ggscatter(AprMaxE, x = 'gdp_per_capita', y ='freqdeadlog',
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "GDP", ylab = "Rate of Deaths in April",
+          title="Rate of Deaths in April in European Countries",
+          label="location", repel=TRUE)
+```
+And now with May.
+
+##May in Europe
+```{r}
+#Graphs for May
+MayMaxE = europemay[europemay$date == max(europemay$date),]
+MayMaxE$freqpop = MayMaxE$frequency/MayMaxE$population
+MayMaxE$freqdead = MayMaxE$deathfreq/MayMaxE$population
+MayMaxE$freqpoplog = log(MayMaxE$freqpop)
+MayMaxE$freqdeadlog = log(MayMaxE$freqdead)
+
+#Temperature
+ggscatter(MayMaxE, x = 'MAY', y ='freqpoplog',
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "Temperature", ylab = "Rate of Cases in May",
+          title="Rate of Cases in May in European Countries",
+          label="location", repel=TRUE)
+
+ggscatter(MayMaxE, x = 'MAY', y ='freqdeadlog',
+                    xlim =c(-5,25),
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "Temperature", ylab = "Rate of Deaths in May",
+          title="Rate of Deaths in May in European Countries",
+          label="location", repel=TRUE, xaxis=c(-5,25))
+
+#GDP
+ggscatter(MayMaxE, x = 'gdp_per_capita', y ='freqpoplog',
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "GDP", ylab = "Rate of Cases in May",
+          title="Rate of Cases in May in European Countries",
+          label="location", repel=TRUE)
+
+ggscatter(MayMaxE, x = 'gdp_per_capita', y ='freqdeadlog',
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "GDP", ylab = "Rate of Deaths in May",
+          title="Rate of Deaths in May in European Countries",
+          label="location", repel=TRUE)
+
+```
+And now we do a similar procedure with the data for Asian Countries
+
+First we get the amount of cases for each month in Asian Countries
+##Asia
+```{r}
+
+#Gather data from Asia
+asiadf = weather %>% filter(continent == "Asia")
+
+
+#March
+asiamar = asiadf %>% filter(month == "03")
+freqdf = data.frame(tapply(asiamar$new_cases, asiamar$location, FUN=sum) )
+freqdf <- tibble::rownames_to_column(freqdf, "VALUE")
+names(freqdf)[1] <-"location"
+names(freqdf)[2] <- "frequency"
+
+freqddf =data.frame(tapply(asiamar$new_deaths, asiamar$location, FUN=sum) )
+freqddf = tibble::rownames_to_column(freqddf, "VALUE")
+names(freqddf)[1] <-"location"
+names(freqddf)[2] <- "deathfreq"
+Afreqdf = merge(freqdf, freqddf, by="location")
+asiamar = merge(asiamar, Afreqdf, by="location")
+
+#April
+asiaapr = asiadf %>% filter(month == "04")
+freqdf = data.frame(tapply(asiaapr$new_cases, asiaapr$location, FUN=sum) )
+freqdf <- tibble::rownames_to_column(freqdf, "VALUE")
+names(freqdf)[1] <-"location"
+names(freqdf)[2] <- "frequency"
+
+freqddf =data.frame(tapply(asiaapr$new_deaths, asiaapr$location, FUN=sum) )
+freqddf = tibble::rownames_to_column(freqddf, "VALUE")
+names(freqddf)[1] <-"location"
+names(freqddf)[2] <- "deathfreq"
+Afreqdf = merge(freqdf, freqddf, by="location")
+asiaapr = merge(asiaapr, Afreqdf, by="location")
+
+#May
+asiamay = asiadf %>% filter(month == "05")
+freqdf = data.frame(tapply(asiamay$new_cases, asiamay$location, FUN=sum) )
+freqdf <- tibble::rownames_to_column(freqdf, "VALUE")
+names(freqdf)[1] <-"location"
+names(freqdf)[2] <- "frequency"
+
+freqddf =data.frame(tapply(asiamay$new_deaths, asiamay$location, FUN=sum) )
+freqddf = tibble::rownames_to_column(freqddf, "VALUE")
+names(freqddf)[1] <-"location"
+names(freqddf)[2] <- "deathfreq"
+Afreqdf = merge(freqdf, freqddf, by="location")
+asiamay = merge(asiamay, Afreqdf, by="location")
+```
+Then similarly to the previous part, we start graphing.
+##March in Asia
+```{r}
+MarMaxA = asiamar[asiamar$date == max(asiamar$date),]
+MarMaxA$freqpop = MarMaxA$frequency/MarMaxA$population
+MarMaxA$freqdead = MarMaxA$deathfreq/MarMaxA$population
+MarMaxA$freqpoplog = log(MarMaxA$freqpop)
+MarMaxA$freqdeadlog = log(MarMaxA$freqdead)
+
+#Temperature
+ggscatter(MarMaxA, x = 'MAR', y ='freqpoplog',
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "Temperature", ylab = "Rate of Cases in March",
+          title="Rate of Cases in March in Asian Countries",
+          label="location", repel=TRUE)
+
+ggscatter(MarMaxA, x = 'MAR', y ='freqdeadlog',
+          xlim =c(5,32),
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "Temperature", ylab = "Rate of Deaths in March",
+          title="Rate of Deaths in March in Asian Countries",
+          label="location", repel=TRUE)
+#GDP
+ggscatter(MarMaxA, x = 'gdp_per_capita', y ='freqpoplog',
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "GDP", ylab = "Rate of Cases in March",
+          title="Rate of Cases in March in Asian Countries",
+          label="location", repel=TRUE)
+
+ggscatter(MarMaxA, x = 'gdp_per_capita', y ='freqdeadlog',
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "GDP", ylab = "Rate of Deaths in March",
+          title="Rate of Deaths in March in Asian Countries",
+          label="location", repel=TRUE)
+```
+Then we do the one for Asia.
+##April in Asia
+```{r}
+#Graphs for April
+AprMaxA = asiaapr[asiaapr$date == max(asiaapr$date),]
+AprMaxA$freqpop = AprMaxA$frequency/AprMaxA$population
+AprMaxA$freqdead = AprMaxA$deathfreq/AprMaxA$population
+AprMaxA$freqpoplog = log(AprMaxA$freqpop)
+AprMaxA$freqdeadlog = log(AprMaxA$freqdead)
+
+#Temperature
+ggscatter(AprMaxA, x = 'APR', y ='freqpoplog',
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "Temperature", ylab = "Rate of Cases in April",
+          title="Rate of Cases in April in Asian Countries",
+          label="location", repel=TRUE)
+
+ggscatter(AprMaxA, x = 'APR', y ='freqdeadlog',
+                                        xlim =c(5,32),
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "Temperature", ylab = "Rate of Deaths in April",
+          title="Rate of Deaths in April in Asian Countries",
+          label="location", repel=TRUE)
+#GDP
+ggscatter(AprMaxA, x = 'gdp_per_capita', y ='freqpoplog',
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "GDP", ylab = "Rate of Cases in April",
+          title="Rate of Cases in April in Asian Countries",
+          label="location", repel=TRUE)
+
+ggscatter(AprMaxA, x = 'gdp_per_capita', y ='freqdeadlog',
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "GDP", ylab = "Rate of Deaths in April",
+          title="Rate of Deaths in April in Asian Countries",
+          label="location", repel=TRUE)
+```
+And finally we do it for May
+##May in Asia
+```{r}
+#Graphs for May
+MayMaxA = asiamay[asiamay$date == max(asiamay$date),]
+MayMaxA$freqpop = MayMaxA$frequency/MayMaxA$population
+MayMaxA$freqdead = MayMaxA$deathfreq/MayMaxA$population
+MayMaxA$freqpoplog = log(MayMaxA$freqpop)
+MayMaxA$freqdeadlog = log(MayMaxA$freqdead)
+
+#Temperature
+ggscatter(MayMaxA, x = 'MAY', y ='freqpoplog',
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "Temperature", ylab = "Rate of Cases in May",
+          title="Rate of Cases in May in Asian Countries",
+          label="location", repel=TRUE)
+
+ggscatter(MayMaxA, x = 'MAY', y ='freqdeadlog',
+                              xlim =c(5,32),
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "Temperature", ylab = "Rate of Deaths in May",
+          title="Rate of Deaths in May in Asian Countries",
+          label="location", repel=TRUE)
+
+#GDP
+ggscatter(MayMaxA, x = 'gdp_per_capita', y ='freqpoplog',
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "GDP", ylab = "Rate of Cases in May",
+          title="Rate of Cases in May in Asian Countries",
+          label="location", repel=TRUE)
+
+ggscatter(MayMaxA, x = 'gdp_per_capita', y ='freqdeadlog',
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "GDP", ylab = "Rate of Deaths in May",
+          title="Rate of Deaths in May in Asian Countries",
+          label="location", repel=TRUE)
+```
+##Testing for outliers in Europe data
+```{r}
+
+#Cooks Distance on freq pop log
+rownames(MarMaxE) <- 1:nrow(MarMaxE)
+#Building linear model
+frqmarlm = lm(freqpoplog~MAR, data=MarMaxE)
+cooksd = cooks.distance(frqmarlm)
+
+n <- nrow(MarMaxE)
+plot(cooksd, main = "Cooks Distance for Influential Obs")
+abline(h = 4/n, lty = 2, col = "steelblue")
+#Plotting
+plot(cooks.distance(frqmarlm))
+influential_obs <- as.numeric(names(cooksd)[(cooksd > (4/n))])
+othergmarchdc <- MarMaxE[-influential_obs, ]
+ggscatter(othergmarchdc, x = 'MAR', y ='freqpoplog',
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "Temperature", ylab = "Rate of Cases in March",
+          title="Rate of Cases in March in Cold Countries",
+          label="location", repel=TRUE) 
+
+#Freq dead log
+frqmarlm = lm(MarMaxE$freqdeadlog[which(MarMaxE$freqdeadlog != -Inf)] ~ MarMaxE$MAR[which(MarMaxE$freqdeadlog != -Inf)], data=MarMaxE)
+cooksd = cooks.distance(frqmarlm)
+
+n <- nrow(MarMaxE)
+plot(cooksd, main = "Cooks Distance for Influential Obs")
+abline(h = 4/n, lty = 2, col = "steelblue")
+#Plotting
+plot(cooks.distance(frqmarlm))
+influential_obs <- as.numeric(names(cooksd)[(cooksd > (4/n))])
+othergmarchdc <- MarMaxE[-influential_obs, ]
+ggscatter(othergmarchdc, x = 'MAR', y ='freqpoplog',
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "Temperature", ylab = "Rate of Cases in March",
+          title="Rate of Cases in March in Cold Countries",
+          label="location", repel=TRUE) 
+
+
+
+```
+##April outliers
+```{r}
+#Cooks Distance on freq pop log
+rownames(AprMaxE) <- 1:nrow(AprMaxE)
+#Building linear model
+frqmarlm = lm(freqpoplog~APR, data=AprMaxE)
+cooksd = cooks.distance(frqmarlm)
+
+n <- nrow(AprMaxE)
+plot(cooksd, main = "Cooks Distance for Influential Obs")
+abline(h = 4/n, lty = 2, col = "steelblue")
+#Plotting
+plot(cooks.distance(frqmarlm))
+influential_obs <- as.numeric(names(cooksd)[(cooksd > (4/n))])
+othergmarchdc <- AprMaxE[-influential_obs, ]
+ggscatter(othergmarchdc, x = 'APR', y ='freqpoplog',
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "Temperature", ylab = "Rate of Cases in April",
+          title="Rate of Cases in April in Cold Countries",
+          label="location", repel=TRUE) 
+
+#Freq dead log
+frqmarlm = lm(AprMaxE$freqdeadlog[which(AprMaxE$freqdeadlog != -Inf)] ~ AprMaxE$APR[which(AprMaxE$freqdeadlog != -Inf)], data=AprMaxE)
+cooksd = cooks.distance(frqmarlm)
+
+n <- nrow(AprMaxE)
+plot(cooksd, main = "Cooks Distance for Influential Obs")
+abline(h = 4/n, lty = 2, col = "steelblue")
+#Plotting
+plot(cooks.distance(frqmarlm))
+influential_obs <- as.numeric(names(cooksd)[(cooksd > (4/n))])
+othergmarchdc <- AprMaxE[-influential_obs, ]
+ggscatter(othergmarchdc, x = 'APR', y ='freqpoplog',
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "Temperature", ylab = "Rate of Cases in April",
+          title="Rate of Cases in April in Cold Countries",
+          label="location", repel=TRUE) 
+```
+## May Outliers
+```{r}
+#Cooks Distance on freq pop log
+rownames(MayMaxE) <- 1:nrow(MayMaxE)
+#Building linear model
+frqmarlm = lm(MayMaxE$freqpoplog[which(MayMaxE$freqpoplog != -Inf)] ~ MayMaxE$MAY[which(MayMaxE$freqpoplog != -Inf)], data=MayMaxE)
+cooksd = cooks.distance(frqmarlm)
+
+n <- nrow(MayMaxE)
+plot(cooksd, main = "Cooks Distance for Influential Obs")
+abline(h = 4/n, lty = 2, col = "steelblue")
+#Plotting
+plot(cooks.distance(frqmarlm))
+influential_obs <- as.numeric(names(cooksd)[(cooksd > (4/n))])
+othergmarchdc <- MayMaxE[-influential_obs, ]
+ggscatter(othergmarchdc, x = 'MAY', y ='freqpoplog',
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "Temperature", ylab = "Rate of Cases in May",
+          title="Rate of Cases in May in Cold Countries",
+          label="location", repel=TRUE) 
+
+#Freq dead log
+frqmarlm = lm(MayMaxE$freqdeadlog[which(MayMaxE$freqdeadlog != -Inf)] ~ MayMaxE$MAY[which(MayMaxE$freqdeadlog != -Inf)], data=MayMaxE)
+cooksd = cooks.distance(frqmarlm)
+
+n <- nrow(MayMaxE)
+plot(cooksd, main = "Cooks Distance for Influential Obs")
+abline(h = 4/n, lty = 2, col = "steelblue")
+#Plotting
+plot(cooks.distance(frqmarlm))
+influential_obs <- as.numeric(names(cooksd)[(cooksd > (4/n))])
+othergmarchdc <- MayMaxE[-influential_obs, ]
+ggscatter(othergmarchdc, x = 'MAY', y ='freqpoplog',
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "Temperature", ylab = "Rate of Cases in May",
+          title="Rate of Cases in May in Cold Countries",
+          label="location", repel=TRUE) 
+
+```
+And now for Asia
+#Asia outliers
+```{r}
+
+#Cooks Distance on freq pop log
+rownames(MarMaxA) <- 1:nrow(MarMaxA)
+#Building linear model
+frqmarlm = lm(freqpoplog~MAR, data=MarMaxA)
+cooksd = cooks.distance(frqmarlm)
+
+n <- nrow(MarMaxA)
+plot(cooksd, main = "Cooks Distance for Influential Obs")
+abline(h = 4/n, lty = 2, col = "steelblue")
+#Plotting
+plot(cooks.distance(frqmarlm))
+influential_obs <- as.numeric(names(cooksd)[(cooksd > (4/n))])
+othergmarchdc <- MarMaxA[-influential_obs, ]
+ggscatter(othergmarchdc, x = 'MAR', y ='freqpoplog',
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "Temperature", ylab = "Rate of Cases in March",
+          title="Rate of Cases in March in Cold Countries",
+          label="location", repel=TRUE) 
+
+#Freq dead log
+frqmarlm = lm(MarMaxA$freqdeadlog[which(MarMaxA$freqdeadlog != -Inf)] ~ MarMaxA$MAR[which(MarMaxA$freqdeadlog != -Inf)], data=MarMaxA)
+cooksd = cooks.distance(frqmarlm)
+
+n <- nrow(MarMaxA)
+plot(cooksd, main = "Cooks Distance for Influential Obs")
+abline(h = 4/n, lty = 2, col = "steelblue")
+#Plotting
+plot(cooks.distance(frqmarlm))
+influential_obs <- as.numeric(names(cooksd)[(cooksd > (4/n))])
+othergmarchdc <- MarMaxA[-influential_obs, ]
+ggscatter(othergmarchdc, x = 'MAR', y ='freqpoplog',
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "Temperature", ylab = "Rate of Cases in March",
+          title="Rate of Cases in March in Cold Countries",
+          label="location", repel=TRUE) 
+
+
+
+```
+
+April:
+##April outliers
+```{r}
+#Cooks Distance on freq pop log
+rownames(AprMaxA) <- 1:nrow(AprMaxA)
+#Building linear model
+frqmarlm = lm(freqpoplog~APR, data=AprMaxA)
+cooksd = cooks.distance(frqmarlm)
+
+n <- nrow(AprMaxA)
+plot(cooksd, main = "Cooks Distance for Influential Obs")
+abline(h = 4/n, lty = 2, col = "steelblue")
+#Plotting
+plot(cooks.distance(frqmarlm))
+influential_obs <- as.numeric(names(cooksd)[(cooksd > (4/n))])
+othergmarchdc <- AprMaxA[-influential_obs, ]
+ggscatter(othergmarchdc, x = 'APR', y ='freqpoplog',
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "Temperature", ylab = "Rate of Cases in April",
+          title="Rate of Cases in April in Cold Countries",
+          label="location", repel=TRUE) 
+
+#Freq dead log
+frqmarlm = lm(AprMaxA$freqdeadlog[which(AprMaxA$freqdeadlog != -Inf)] ~ AprMaxA$APR[which(AprMaxA$freqdeadlog != -Inf)], data=AprMaxA)
+cooksd = cooks.distance(frqmarlm)
+
+n <- nrow(AprMaxA)
+plot(cooksd, main = "Cooks Distance for Influential Obs")
+abline(h = 4/n, lty = 2, col = "steelblue")
+#Plotting
+plot(cooks.distance(frqmarlm))
+influential_obs <- as.numeric(names(cooksd)[(cooksd > (4/n))])
+othergmarchdc <- AprMaxA[-influential_obs, ]
+ggscatter(othergmarchdc, x = 'APR', y ='freqpoplog',
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "Temperature", ylab = "Rate of Cases in April",
+          title="Rate of Cases in April in Cold Countries",
+          label="location", repel=TRUE) 
+```
+
+May:
+##April outliers
+```{r}
+#Cooks Distance on freq pop log
+rownames(MayMaxA) <- 1:nrow(MayMaxA)
+#Building linear model
+frqmarlm = lm(MayMaxA$freqpoplog[which(MayMaxA$freqpoplog != -Inf)] ~ MayMaxA$MAY[which(MayMaxA$freqpoplog != -Inf)], data=MayMaxA)
+cooksd = cooks.distance(frqmarlm)
+
+n <- nrow(MayMaxA)
+plot(cooksd, main = "Cooks Distance for Influential Obs")
+abline(h = 4/n, lty = 2, col = "steelblue")
+#Plotting
+plot(cooks.distance(frqmarlm))
+influential_obs <- as.numeric(names(cooksd)[(cooksd > (4/n))])
+othergmarchdc <- MayMaxA[-influential_obs, ]
+ggscatter(othergmarchdc, x = 'MAY', y ='freqpoplog',
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "Temperature", ylab = "Rate of Cases in May",
+          title="Rate of Cases in May in Cold Countries",
+          label="location", repel=TRUE) 
+
+#Freq dead log
+frqmarlm = lm(MayMaxA$freqdeadlog[which(MayMaxA$freqdeadlog != -Inf)] ~ MayMaxA$MAY[which(MayMaxA$freqdeadlog != -Inf)], data=MayMaxA)
+cooksd = cooks.distance(frqmarlm)
+
+n <- nrow(MayMaxA)
+plot(cooksd, main = "Cooks Distance for Influential Obs")
+abline(h = 4/n, lty = 2, col = "steelblue")
+#Plotting
+plot(cooks.distance(frqmarlm))
+influential_obs <- as.numeric(names(cooksd)[(cooksd > (4/n))])
+othergmarchdc <- MayMaxA[-influential_obs, ]
+ggscatter(othergmarchdc, x = 'MAY', y ='freqpoplog',
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "Temperature", ylab = "Rate of Cases in May",
+          title="Rate of Cases in May in Cold Countries",
+          label="location", repel=TRUE) 
+
+
+```
+
+##European data outliers for gdp
+```{r}
+EuropeLD = europedf[europedf$date == max(europedf$date),]
+EuropeLD$freqpop = EuropeLD$total_cases/EuropeLD$population
+EuropeLD$freqdead = EuropeLD$total_deaths/EuropeLD$population
+EuropeLD$freqpoplog = log(EuropeLD$freqpop)
+EuropeLD$freqdeadlog = log(EuropeLD$freqdead)
+
+#Cooks Distance on freq pop log
+rownames(EuropeLD) <- 1:nrow(EuropeLD)
+#Building linear model
+frqmarlm = lm(freqpoplog~gdp_per_capita, data=EuropeLD)
+cooksd = cooks.distance(frqmarlm)
+
+n <- nrow(EuropeLD)
+plot(cooksd, main = "Cooks Distance for Influential Obs")
+abline(h = 4/n, lty = 2, col = "steelblue")
+#Plotting
+plot(cooks.distance(frqmarlm))
+influential_obs <- as.numeric(names(cooksd)[(cooksd > (4/n))])
+othergmarchdc <- EuropeLD[-influential_obs, ]
+ggscatter(othergmarchdc, x = 'gdp_per_capita', y ='freqpoplog',
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "GDP", ylab = "Rate of Cases",
+          title="W/O: Rate of Cases with respect to GDP",
+          label="location", repel=TRUE) 
+ggscatter(EuropeLD, x = 'gdp_per_capita', y ='freqpoplog',
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "GDP", ylab = "Rate of Cases",
+          title="W: Rate of Cases with respect to GDP",
+          label="location", repel=TRUE) 
+
+
+#Building linear model with death
+frqmarlm = lm(freqdeadlog~gdp_per_capita, data=EuropeLD)
+cooksd = cooks.distance(frqmarlm)
+
+n <- nrow(EuropeLD)
+plot(cooksd, main = "Cooks Distance for Influential Obs")
+abline(h = 4/n, lty = 2, col = "steelblue")
+#Plotting
+plot(cooks.distance(frqmarlm))
+influential_obs <- as.numeric(names(cooksd)[(cooksd > (4/n))])
+othergmarchdc <- EuropeLD[-influential_obs, ]
+ggscatter(othergmarchdc, x = 'gdp_per_capita', y ='freqdeadlog',
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "GDP", ylab = "Rate of Cases",
+          title="W/O: Rate of Deaths with respect to GDP",
+          label="location", repel=TRUE) 
+ggscatter(EuropeLD, x = 'gdp_per_capita', y ='freqdeadlog',
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "GDP", ylab = "Rate of Cases",
+          title="W: Rate of Deaths with respect to GDP",
+          label="location", repel=TRUE) 
+
+```
+##Asian data outliers for gdp
+```{r}
+AsiaLD = asiadf[asiadf$date == max(asiadf$date),]
+AsiaLD$freqpop = AsiaLD$total_cases/AsiaLD$population
+AsiaLD$freqdead = AsiaLD$total_deaths/AsiaLD$population
+AsiaLD$freqpoplog = log(AsiaLD$freqpop)
+AsiaLD$freqdeadlog = log(AsiaLD$freqdead)
+
+#Cooks Distance on freq pop log
+rownames(AsiaLD) <- 1:nrow(AsiaLD)
+#Building linear model
+frqmarlm = lm(freqpoplog~gdp_per_capita, data=AsiaLD)
+cooksd = cooks.distance(frqmarlm)
+
+n <- nrow(AsiaLD)
+plot(cooksd, main = "Cooks Distance for Influential Obs")
+abline(h = 4/n, lty = 2, col = "steelblue")
+#Plotting
+plot(cooks.distance(frqmarlm))
+influential_obs <- as.numeric(names(cooksd)[(cooksd > (4/n))])
+othergmarchdc <- AsiaLD[-influential_obs, ]
+ggscatter(othergmarchdc, x = 'gdp_per_capita', y ='freqpoplog',
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "GDP", ylab = "Rate of Cases",
+          title="W/O: Rate of Cases with respect to GDP",
+          label="location", repel=TRUE) 
+ggscatter(AsiaLD, x = 'gdp_per_capita', y ='freqpoplog',
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "GDP", ylab = "Rate of Cases",
+          title="W: Rate of Cases with respect to GDP",
+          label="location", repel=TRUE) 
+
+
+#Building linear model with death
+frqmarlm = lm(AsiaLD$freqdeadlog[which(AsiaLD$freqdeadlog != -Inf)] ~ AsiaLD$gdp_per_capita[which(AsiaLD$freqdeadlog != -Inf)])
+cooksd = cooks.distance(frqmarlm)
+
+n <- nrow(AsiaLD)
+plot(cooksd, main = "Cooks Distance for Influential Obs")
+abline(h = 4/n, lty = 2, col = "steelblue")
+#Plotting
+plot(cooks.distance(frqmarlm))
+influential_obs <- as.numeric(names(cooksd)[(cooksd > (4/n))])
+othergmarchdc <- AsiaLD[-influential_obs, ]
+ggscatter(othergmarchdc, x = 'gdp_per_capita', y ='freqdeadlog',
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "GDP", ylab = "Rate of Cases",
+          title="W/O: Rate of Deaths with respect to GDP",
+          label="location", repel=TRUE) 
+ggscatter(AsiaLD, x = 'gdp_per_capita', y ='freqdeadlog',
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "GDP", ylab = "Rate of Cases",
+          title="W: Rate of Deaths with respect to GDP",
+          label="location", repel=TRUE) 
+
+```
+Now, I want to graph the GDP plots again but excluding countries with a low death rate
+```{r}
+EuropeLD = europedf[europedf$date == max(europedf$date),]
+EuropeLD = EuropeLD[EuropeLD$total_deaths > quantile(EuropeLD$total_deaths, .25, names = FALSE),]
+EuropeLD$freqpop = EuropeLD$total_cases/EuropeLD$population
+EuropeLD$freqdead = EuropeLD$total_deaths/EuropeLD$population
+EuropeLD$freqpoplog = log(EuropeLD$freqpop)
+EuropeLD$freqdeadlog = log(EuropeLD$freqdead)
+
+#Cooks Distance on freq pop log
+rownames(EuropeLD) <- 1:nrow(EuropeLD)
+#Building linear model
+frqmarlm = lm(freqpoplog~gdp_per_capita, data=EuropeLD)
+cooksd = cooks.distance(frqmarlm)
+
+n <- nrow(EuropeLD)
+plot(cooksd, main = "Cooks Distance for Influential Obs")
+abline(h = 4/n, lty = 2, col = "steelblue")
+#Plotting
+plot(cooks.distance(frqmarlm))
+influential_obs <- as.numeric(names(cooksd)[(cooksd > (4/n))])
+othergmarchdc <- EuropeLD[-influential_obs, ]
+ggscatter(othergmarchdc, x = 'gdp_per_capita', y ='freqpoplog',
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "GDP", ylab = "Rate of Cases",
+          title="W/O: Rate of Cases with respect to GDP",
+          label="location", repel=TRUE) 
+ggscatter(EuropeLD, x = 'gdp_per_capita', y ='freqpoplog',
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "GDP", ylab = "Rate of Cases",
+          title="W: Rate of Cases with respect to GDP",
+          label="location", repel=TRUE) 
+
+
+#Building linear model with death
+frqmarlm = lm(freqdeadlog~gdp_per_capita, data=EuropeLD)
+cooksd = cooks.distance(frqmarlm)
+
+n <- nrow(EuropeLD)
+plot(cooksd, main = "Cooks Distance for Influential Obs")
+abline(h = 4/n, lty = 2, col = "steelblue")
+#Plotting
+plot(cooks.distance(frqmarlm))
+influential_obs <- as.numeric(names(cooksd)[(cooksd > (4/n))])
+othergmarchdc <- EuropeLD[-influential_obs, ]
+ggscatter(othergmarchdc, x = 'gdp_per_capita', y ='freqdeadlog',
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "GDP", ylab = "Rate of Cases",
+          title="W/O: Rate of Deaths with respect to GDP",
+          label="location", repel=TRUE) 
+ggscatter(EuropeLD, x = 'gdp_per_capita', y ='freqdeadlog',
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "GDP", ylab = "Rate of Cases",
+          title="W: Rate of Deaths with respect to GDP",
+          label="location", repel=TRUE) 
+
+```
+And now for Asia
+```{r}
+AsiaLD = asiadf[asiadf$date == max(asiadf$date),]
+AsiaLD = AsiaLD[AsiaLD$total_deaths > quantile(AsiaLD$total_deaths, .25, names = FALSE),]
+AsiaLD$freqpop = AsiaLD$total_cases/AsiaLD$population
+AsiaLD$freqdead = AsiaLD$total_deaths/AsiaLD$population
+AsiaLD$freqpoplog = log(AsiaLD$freqpop)
+AsiaLD$freqdeadlog = log(AsiaLD$freqdead)
+
+#Cooks Distance on freq pop log
+rownames(AsiaLD) <- 1:nrow(AsiaLD)
+#Building linear model
+frqmarlm = lm(freqpoplog~gdp_per_capita, data=AsiaLD)
+cooksd = cooks.distance(frqmarlm)
+
+n <- nrow(AsiaLD)
+plot(cooksd, main = "Cooks Distance for Influential Obs")
+abline(h = 4/n, lty = 2, col = "steelblue")
+#Plotting
+plot(cooks.distance(frqmarlm))
+influential_obs <- as.numeric(names(cooksd)[(cooksd > (4/n))])
+othergmarchdc <- AsiaLD[-influential_obs, ]
+ggscatter(othergmarchdc, x = 'gdp_per_capita', y ='freqpoplog',
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "GDP", ylab = "Rate of Cases",
+          title="W/O: Rate of Cases with respect to GDP",
+          label="location", repel=TRUE) 
+ggscatter(AsiaLD, x = 'gdp_per_capita', y ='freqpoplog',
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "GDP", ylab = "Rate of Cases",
+          title="W: Rate of Cases with respect to GDP",
+          label="location", repel=TRUE) 
+
+
+#Building linear model with death
+frqmarlm = lm(AsiaLD$freqdeadlog[which(AsiaLD$freqdeadlog != -Inf)] ~ AsiaLD$gdp_per_capita[which(AsiaLD$freqdeadlog != -Inf)])
+cooksd = cooks.distance(frqmarlm)
+
+n <- nrow(AsiaLD)
+plot(cooksd, main = "Cooks Distance for Influential Obs")
+abline(h = 4/n, lty = 2, col = "steelblue")
+#Plotting
+plot(cooks.distance(frqmarlm))
+influential_obs <- as.numeric(names(cooksd)[(cooksd > (4/n))])
+othergmarchdc <- AsiaLD[-influential_obs, ]
+ggscatter(othergmarchdc, x = 'gdp_per_capita', y ='freqdeadlog',
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "GDP", ylab = "Rate of Cases",
+          title="W/O: Rate of Deaths with respect to GDP",
+          label="location", repel=TRUE) 
+ggscatter(AsiaLD, x = 'gdp_per_capita', y ='freqdeadlog',
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "GDP", ylab = "Rate of Cases",
+          title="W: Rate of Deaths with respect to GDP",
+          label="location", repel=TRUE) 
+
+```
+##Excess deaths
+```{r}
+excessdeaths = read.csv("excess-deaths.csv")
+bydates = excessdeaths %>%group_by(country) %>% summarize(date=max(date))
+excessdeaths = merge(bydates, excessdeaths, by=c("date", "country"))
+names(excessdeaths)[names(excessdeaths) == "country"] <- "location"
+excessdeaths$location[5] <- "United States"
+#lastday = weather[weather$date == max(weather$date),]
+lastday = weather %>%group_by(location) %>% summarize(date=max(date))
+lastday = merge(lastday, weather, by=c("location", "date"))
+excessdeaths = excessdeaths[c(2,3)]
+extravalues = merge(excessdeaths, lastday, by="location")
+
+extravalues$freqpop = extravalues$total_cases/extravalues$population
+extravalues$freqdead = extravalues$total_deaths/extravalues$population
+extravalues$freqpoplog = log(extravalues$freqpop)
+extravalues$freqdeadlog = log(extravalues$freqdead)
+extravalues$excessdeath = extravalues$total_deaths + extravalues$fitted
+extravalues$excessdeathpop = extravalues$excessdeath/extravalues$population
+extravalues$excessdeathpoplog = log(extravalues$excessdeathpop)
+
+ggscatter(extravalues, x = 'gdp_per_capita', y ='excessdeathpoplog',
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "GDP", ylab = "Rate of Deaths",
+          title="Rate of Deaths with Excess Deaths with respect to GDP",
+          label="location", repel=TRUE) 
+
+ggscatter(extravalues, x = 'gdp_per_capita', y ='freqdeadlog',
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "GDP", ylab = "Rate of Deaths",
+          title="Rate of Deaths with respect to GDP",
+          label="location", repel=TRUE) 
+
+
+ggscatter(extravalues, x = 'MAR', y ='excessdeathpoplog',
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "GDP", ylab = "Rate of Deaths",
+          title="W: Rate of Deaths with respect to Temp in March",
+          label="location", repel=TRUE) 
+
+ggscatter(extravalues, x = 'MAR', y ='freqdeadlog',
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "GDP", ylab = "Rate of Deaths",
+          title="W: Rate of Deaths with respect to Temp in March",
+          label="location", repel=TRUE) 
+
+ggplot(extravalues, aes(x=gdp_per_capita)) + 
+  geom_point(aes(y = excessdeathpoplog), color = "darkred") + 
+  geom_point(aes(y = freqdeadlog), color="steelblue", linetype="twodash")+
+  ggtitle("Excess Deaths vs Observed Deaths in relation to GDP")+
+  xlab("GDP")+
+  ylab("Rate of Deaths")
+
+```
