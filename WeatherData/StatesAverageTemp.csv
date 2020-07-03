@@ -1,0 +1,246 @@
+﻿location,date ,temperature 
+Alabama,2020-01,49.6
+Alabama,2020-02,51
+Alabama,2020-03,63.5
+Alabama,2020-04,62
+Alabama,2020-05,68.8
+Alaska ,2020-01,-6.2
+Alaska ,2020-02,1.4
+Alaska ,2020-03,11.9
+Alaska ,2020-04,27.4
+Alaska ,2020-05,43.3
+Arizona,2020-01,43.7
+Arizona,2020-02,46
+Arizona,2020-03,50.9
+Arizona,2020-04,59.5
+Arizona,2020-05,70.5
+Arkansas,2020-01,43.9
+Arkansas,2020-02,44.4
+Arkansas,2020-03,56.4
+Arkansas,2020-04,58.8
+Arkansas,2020-05,66.6
+California,2020-01,45.3
+California,2020-02,49.2
+California,2020-03,47.9
+California,2020-04,56.6
+California,2020-05,64.7
+Colorado,2020-01,27.4
+Colorado,2020-02,26.4
+Colorado,2020-03,38.7
+Colorado,2020-04,43.3
+Colorado,2020-05,55.4
+Connecticut,2020-01,33.2
+Connecticut,2020-02,34
+Connecticut,2020-03,41.6
+Connecticut,2020-04,44.4
+Connecticut,2020-05,56.3
+Delaware,2020-01,40.1
+Delaware,2020-02,41.9
+Delaware,2020-03,49.5
+Delaware,2020-04,52.4
+Delaware,2020-05,60.8
+Florida,2020-01,61.8
+Florida,2020-02,63.6
+Florida,2020-03,71.1
+Florida,2020-04,73.2
+Florida,2020-05,75.6
+Georgia,2020-01,51.4
+Georgia,2020-02,52
+Georgia,2020-03,63.1
+Georgia,2020-04,63.2
+Georgia,2020-05,69.1
+Idaho,2020-01,27.3
+Idaho,2020-02,26.3
+Idaho,2020-03,35.2
+Idaho,2020-04,41.6
+Idaho,2020-05,50.5
+Illinois,2020-01,31.9
+Illinois,2020-02,32
+Illinois,2020-03,44.4
+Illinois,2020-04,49.6
+Illinois,2020-05,60.4
+Indiana,2020-01,34.3
+Indiana,2020-02,32.9
+Indiana,2020-03,44.6
+Indiana,2020-04,49
+Indiana,2020-05,59.7
+Iowa,2020-01,23.1
+Iowa,2020-02,24.8
+Iowa,2020-03,40.3
+Iowa,2020-04,46.8
+Iowa,2020-05,57.6
+Kansas,2020-01,34
+Kansas,2020-02,34.9
+Kansas,2020-03,48
+Kansas,2020-04,52.7
+Kansas,2020-05,61.6
+Kentucky,2020-01,40.2
+Kentucky,2020-02,39.7
+Kentucky,2020-03,51.4
+Kentucky,2020-04,52.8
+Kentucky,2020-05,62
+Louisiana,2020-01,53.6
+Louisiana,2020-02,54
+Louisiana,2020-03,67.3
+Louisiana,2020-04,66.5
+Louisiana,2020-05,72.8
+Maine,2020-01,20.8
+Maine,2020-02,20.1
+Maine,2020-03,29.6
+Maine,2020-04,37.9
+Maine,2020-05,51.4
+Maryland,2020-01,39.1
+Maryland,2020-02,40.9
+Maryland,2020-03,49.3
+Maryland,2020-04,52
+Maryland,2020-05,60.5
+Massachusetts,2020-01,32.1
+Massachusetts,2020-02,32.5
+Massachusetts,2020-03,40.3
+Massachusetts,2020-04,43.2
+Massachusetts,2020-05,56.2
+Michigan,2020-01,27
+Michigan,2020-02,23.6
+Michigan,2020-03,35
+Michigan,2020-04,40.1
+Michigan,2020-05,53.1
+Minnesota,2020-01,14
+Minnesota,2020-02,14
+Minnesota,2020-03,30.5
+Minnesota,2020-04,39.4
+Minnesota,2020-05,53.7
+Mississippi,2020-01,49.9
+Mississippi,2020-02,50.7
+Mississippi,2020-03,64
+Mississippi,2020-04,62.7
+Mississippi,2020-05,70
+Missouri,2020-01,34.6
+Missouri,2020-02,35.4
+Missouri,2020-03,48.8
+Missouri,2020-04,53
+Missouri,2020-05,61.9
+Montana,2020-01,23.4
+Montana,2020-02,25.5
+Montana,2020-03,31.6
+Montana,2020-04,38.5
+Montana,2020-05,50.4
+Nebraska,2020-01,27.2
+Nebraska,2020-02,29.5
+Nebraska,2020-03,41.1
+Nebraska,2020-04,45.9
+Nebraska,2020-05,56.5
+Nevada,2020-01,35.2
+Nevada,2020-02,36.2
+Nevada,2020-03,40.4
+Nevada,2020-04,48.8
+Nevada,2020-05,58.8
+New Hampshire,2020-01,25.2
+New Hampshire,2020-02,24.3
+New Hampshire,2020-03,34.2
+New Hampshire,2020-04,39.7
+New Hampshire,2020-05,53.6
+New Jersey,2020-01,37.1
+New Jersey,2020-02,39
+New Jersey,2020-03,46.3
+New Jersey,2020-04,48.7
+New Jersey,2020-05,58.9
+New Mexico,2020-01,36.9
+New Mexico,2020-02,38.4
+New Mexico,2020-03,48
+New Mexico,2020-04,53.8
+New Mexico,2020-05,65.1
+New York,2020-01,27.7
+New York,2020-02,26.6
+New York,2020-03,37.2
+New York,2020-04,41.2
+New York,2020-05,54.1
+North Carolina,2020-01,46
+North Carolina,2020-02,47.2
+North Carolina,2020-03,56
+North Carolina,2020-04,57.6
+North Carolina,2020-05,63.4
+North Dakota,2020-01,12.8
+North Dakota,2020-02,17.7
+North Dakota,2020-03,29.8
+North Dakota,2020-04,37.7
+North Dakota,2020-05,52.4
+Ohio,2020-01,34.9
+Ohio,2020-02,32.8
+Ohio,2020-03,44.7
+Ohio,2020-04,47.7
+Ohio,2020-05,58.6
+Oklahoma,2020-01,42.2
+Oklahoma,2020-02,41.7
+Oklahoma,2020-03,55.5
+Oklahoma,2020-04,58
+Oklahoma,2020-05,67.1
+Oregon,2020-01,34.9
+Oregon,2020-02,35.9
+Oregon,2020-03,38.8
+Oregon,2020-04,46.4
+Oregon,2020-05,52.6
+Pennsylvania,2020-01,32.1
+Pennsylvania,2020-02,33.2
+Pennsylvania,2020-03,42.5
+Pennsylvania,2020-04,45
+Pennsylvania,2020-05,56
+Rhode Island,2020-01,35.4
+Rhode Island,2020-02,35.5
+Rhode Island,2020-03,42.6
+Rhode Island,2020-04,44
+Rhode Island,2020-05,56.6
+South Carolina,2020-01,50.3
+South Carolina,2020-02,51
+South Carolina,2020-03,60.4
+South Carolina,2020-04,62.5
+South Carolina,2020-05,68.2
+South Dakota,2020-01,20
+South Dakota,2020-02,23.5
+South Dakota,2020-03,36.3
+South Dakota,2020-04,42.1
+South Dakota,2020-05,54
+Tennessee,2020-01,43
+Tennessee,2020-02,43.3
+Tennessee,2020-03,54.7
+Tennessee,2020-04,55.3
+Tennessee,2020-05,63.8
+Texas,2020-01,50.7
+Texas,2020-02,49.4
+Texas,2020-03,63.2
+Texas,2020-04,65
+Texas,2020-05,74.4
+Utah,2020-01,28.6
+Utah,2020-02,30.8
+Utah,2020-03,40.5
+Utah,2020-04,47.2
+Utah,2020-05,58.7
+Vermont,2020-01,23.5
+Vermont,2020-02,22.4
+Vermont,2020-03,33.1
+Vermont,2020-04,38.9
+Vermont,2020-05,52.9
+Virginia,2020-01,40.6
+Virginia,2020-02,42.4
+Virginia,2020-03,51.7
+Virginia,2020-04,53.3
+Virginia,2020-05,60.3
+Washington,2020-01,34.2
+Washington,2020-02,35.6
+Washington,2020-03,38.3
+Washington,2020-04,46.2
+Washington,2020-05,53.4
+West Virginia,2020-01,37.2
+West Virginia,2020-02,38
+West Virginia,2020-03,47.8
+West Virginia,2020-04,49
+West Virginia,2020-05,57.8
+Wisconsin,2020-01,21.5
+Wisconsin,2020-02,19.1
+Wisconsin,2020-03,34.3
+Wisconsin,2020-04,40.7
+Wisconsin,2020-05,54
+Wyoming,2020-01,24
+Wyoming,2020-02,20.4
+Wyoming,2020-03,33.1
+Wyoming,2020-04,37.7
+Wyoming,2020-05,50.2

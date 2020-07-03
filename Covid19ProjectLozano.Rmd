@@ -1,0 +1,994 @@
+---
+title: "Covid19Gabriela"
+author: "Gabriela Lozano"
+date: "6/25/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Covid Cases Worldwide
+
+This document includes code for plots and data management of different values and the process that went to it.
+
+## Import Libraries
+
+```{r}
+library(rworldmap)
+library(ggplot2)
+library(ggpubr)
+library(dplyr)
+
+```
+
+
+## Import Data
+
+```{r}
+df = read.csv("https://covid.ourworldindata.org/data/owid-covid-data.csv")
+weather= read.csv("Weather_Data_Cleaned.csv")
+co2 = read.csv("co2.csv")
+edu = read.csv("education.csv")
+```
+Afterwards it's time to organize the data into groups. We will start by dividing the countries that got hotter in the summer and the countries that get colder in the summer. To do this, we need the name of the column to be the same as the one in the dataframe with the covid19 data. Then figure out which countries are warm or cold and then merge them together
+## Import Data
+
+```{r}
+#Dropping values with population lower than 1m
+df = df[df$population > 1000000, ]
+
+
+#Change the name of the column
+names(weather)[names(weather) == "CTRY"] <- "location"
+weather = merge(weather, df, by="location")
+
+#Add a column with the month
+weather$month = gsub("2020-", "", weather$date) # Remove year and hyphen
+weather$month = gsub("-", "", weather$month) # remove extra hyphen
+weather$month = substr(weather$month, 1, nchar(weather$month) - 2) # remove day of month
+
+#Warmer and Colder countries
+warmer = weather[weather$MAY >= weather$MAR,]
+colder = weather[weather$MAY < weather$MAR,]
+
+
+```
+Then we can graph the two data frames and compare them. To do this we take the last day recorded and use the library r worldmap. Then we include some plots comparing the values of the different months
+
+## Including Plots
+
+```{r, echo=FALSE}
+
+#Map for the total cases over the population
+#Map plot for warmer countries
+WarmCountryLastDay = warmer[warmer$date == max(warmer$date),]
+WarmCountryLastDay$overpop = WarmCountryLastDay$total_cases/WarmCountryLastDay$population
+WarmCountryLastDay$overdea = WarmCountryLastDay$total_deaths/WarmCountryLastDay$population
+mapped_data1 <- joinCountryData2Map(WarmCountryLastDay, joinCode = "ISO3", 
+                                   nameJoinColumn = "iso_code")
+par(mai=c(0,0,0.2,0),xaxs="i",yaxs="i")
+mapCountryData(mapped_data1, nameColumnToPlot = "overpop", mapTitle="Rate of Cases of Countries that get Warmer in the Summer")
+
+#Map plot for colder countries
+ColdCountryLastDay = colder[colder$date == max(colder$date),]
+ColdCountryLastDay$overpop = ColdCountryLastDay$total_cases/ColdCountryLastDay$population
+ColdCountryLastDay$overdea = ColdCountryLastDay$total_deaths/ColdCountryLastDay$population
+
+mapped_data2 <- joinCountryData2Map(ColdCountryLastDay, joinCode = "ISO3", 
+                                    nameJoinColumn = "iso_code")
+par(mai=c(0,0,0.2,0),xaxs="i",yaxs="i")
+mapCountryData(mapped_data2, nameColumnToPlot = "overpop", colourPalette =c("white","dodgerblue","dodgerblue1", "dodgerblue2", "dodgerblue3", "dodgerblue4", "blue"), mapTitle="Rate of Cases of Countries that get Colder in the Summer")
+
+
+#Map for the total cases
+par(mai=c(0,0,0.2,0),xaxs="i",yaxs="i")
+mapCountryData(mapped_data1, nameColumnToPlot = "total_cases", mapTitle="Countries that get warmer in the summer with the distribution of Covid19 Cases")
+
+#Map plot for colder countries
+par(mai=c(0,0,0.2,0),xaxs="i",yaxs="i")
+mapCountryData(mapped_data2, nameColumnToPlot = "total_cases" , colourPalette =c("white","dodgerblue","dodgerblue1", "dodgerblue2", "dodgerblue3", "dodgerblue4", "blue"), mapTitle="Countries that get colder in the summer with the distribution of Covid19 Cases")
+
+#Death Rates
+mapCountryData(mapped_data1, nameColumnToPlot = "overdea", mapTitle="Rate of Deaths of Countries that get Warmer in the Summer")
+mapCountryData(mapped_data2, nameColumnToPlot = "overdea", colourPalette =c("white","dodgerblue","dodgerblue1", "dodgerblue2", "dodgerblue3", "dodgerblue4", "blue"), mapTitle="Rate of Deaths of Countries that get Colder in the Summer")
+
+
+```
+Now we want to look more individually for each month of data we have including the total cases and deaths in relation to the temperature of all countries.
+## Month of March
+```{r, echo=FALSE}
+#Gathering last day of the month for March in cold countries
+AddMarch = colder %>% filter(month == "03")
+
+#Adding all the total numbers per location
+Marchdf = data.frame(tapply(AddMarch$new_cases, AddMarch$location, FUN=sum) )
+Marchdf <- tibble::rownames_to_column(Marchdf, "VALUE")
+names(Marchdf)[1] <-"location"
+names(Marchdf)[2] <- "frequency"
+
+MarchDdf =data.frame(tapply(AddMarch$new_deaths, AddMarch$location, FUN=sum) )
+MarchDdf = tibble::rownames_to_column(MarchDdf, "VALUE")
+names(MarchDdf)[1] <-"location"
+names(MarchDdf)[2] <- "deathfreq"
+Marchdf = merge(Marchdf, MarchDdf, by="location")
+LastMarchC = merge(Marchdf, AddMarch, by="location")
+
+#Gathering last day of the month for March in warm countries
+AddMarch = warmer %>% filter(month == "03")
+
+#Adding all the total numbers per location
+Marchdf = data.frame(tapply(AddMarch$new_cases, AddMarch$location, FUN=sum) )
+Marchdf <- tibble::rownames_to_column(Marchdf, "VALUE")
+names(Marchdf)[1] <-"location"
+names(Marchdf)[2] <- "frequency"
+MarchDdf =data.frame(tapply(AddMarch$new_deaths, AddMarch$location, FUN=sum) )
+MarchDdf = tibble::rownames_to_column(MarchDdf, "VALUE")
+names(MarchDdf)[1] <-"location"
+names(MarchDdf)[2] <- "deathfreq"
+Marchdf = merge(Marchdf, MarchDdf, by="location")
+
+LastMarchW = merge(Marchdf, AddMarch, by="location")
+
+
+#Map plot for warmer countries in March for total cases
+mapped_data3 <- joinCountryData2Map(LastMarchW, joinCode = "ISO3", 
+                                   nameJoinColumn = "iso_code")
+par(mai=c(0,0,0.2,0),xaxs="i",yaxs="i")
+mapCountryData(mapped_data3, nameColumnToPlot = "frequency", mapTitle="Countries that get warmer in the summer with the distribution of Covid19 Cases")
+
+#Map plot for colder countries in March for total cases
+mapped_data4 <- joinCountryData2Map(LastMarchC, joinCode = "ISO3", 
+                                    nameJoinColumn = "iso_code")
+par(mai=c(0,0,0.2,0),xaxs="i",yaxs="i")
+mapCountryData(mapped_data4, nameColumnToPlot = "frequency", colourPalette =c("white","dodgerblue","dodgerblue1", "dodgerblue2", "dodgerblue3", "dodgerblue4", "blue"), mapTitle="Countries that get colder in the summer with the distribution of Covid19 Cases")
+
+
+#Plot of March cases
+MarCTC = ggplot(LastMarchC, aes(x = MAR, y = total_cases)) + geom_point() + theme_bw() +
+  xlab("Temperature of March in *C") + ylab("Total Positive Cases") + 
+  ggtitle("Total Cases in Cold Countries with respect to Temperature")
+MarWTC = ggplot(LastMarchW, aes(x = MAR, y = total_cases)) + geom_point() + theme_bw()+
+  xlab("Temperature of March in *C") + ylab("Total Positive Cases") + 
+  ggtitle("Total Cases in Warm Countries with respect to Temperature")
+ggarrange(MarCTC, MarWTC)
+
+#Plot of March cases with log on total cases
+MarCTClog = ggplot(LastMarchC, aes(x = log(MAR), y = log(total_cases))) + geom_point() + theme_bw() + 
+  xlab("Temperature of March in *C") + ylab("Total Positive Cases") + 
+  ggtitle("Total Cases in Cold Countries with respect to Temperature")
+MarWTClog =ggplot(LastMarchW, aes(x = log(MAR), y = log(total_cases))) + geom_point() + theme_bw() +
+  xlab("Temperature of March in *C") + ylab("Total Positive Cases") + 
+  ggtitle("Total Cases in Cold Countries with respect to Temperature")
+ggarrange(MarCTClog, MarWTClog)
+
+
+#Plot of the Deaths
+
+#Map plot for warmer countries in March for deaths
+par(mai=c(0,0,0.2,0),xaxs="i",yaxs="i")
+mapCountryData(mapped_data3, nameColumnToPlot = "total_deaths", mapTitle="Countries that get warmer in the summer with the distribution of Covid19 Deaths")
+
+#Map plot for colder countries in March for total deaths
+
+par(mai=c(0,0,0.2,0),xaxs="i",yaxs="i")
+mapCountryData(mapped_data4, nameColumnToPlot = "total_deaths", colourPalette =c("white","dodgerblue","dodgerblue1", "dodgerblue2", "dodgerblue3", "dodgerblue4", "blue"), mapTitle="Countries that get colder in the summer with the distribution of Covid19 Deaths")
+
+
+#Plot of March deaths
+MarCTD = ggplot(LastMarchC, aes(x = MAR, y = total_deaths)) + geom_point() + theme_bw() +
+  xlab("Temperature of March in *C") + ylab("Total Deaths") + 
+  ggtitle("Total Deaths in Cold Countries with respect to Temperature")
+MarWTD = ggplot(LastMarchW, aes(x = MAR, y = total_deaths)) + geom_point() + theme_bw()+
+  xlab("Temperature of March in *C") + ylab("Total Deaths") + 
+  ggtitle("Total Deaths in Warm Countries with respect to Temperature")
+ggarrange(MarCTD, MarWTD)
+
+#Plot of March cases with log on deaths
+MarCTDlog = ggplot(LastMarchC, aes(x = log(MAR), y = log(total_cases))) + geom_point() + theme_bw() + 
+  xlab("Temperature of March in *C") + ylab("Total Deaths") + 
+  ggtitle("Total Deaths in Cold Countries with respect to Temperature")
+MarWTDlog =ggplot(LastMarchW, aes(x = log(MAR), y = log(total_cases))) + geom_point() + theme_bw() +
+  xlab("Temperature of March in *C") + ylab("Total Deaths") + 
+  ggtitle("Total Deaths in Cold Countries with respect to Temperature")
+ggarrange(MarCTDlog, MarWTDlog)
+
+#Plot of temperature with cases over population
+
+#Plot of March cases
+MarCTCP = ggplot(LastMarchC, aes(x = MAR, y = total_cases/population)) + geom_point() + theme_bw() +
+  xlab("Temperature of March in *C") + ylab("Total Positive Cases") + 
+  ggtitle("Total Cases in Cold Countries with respect to Temperature")
+MarWTCP = ggplot(LastMarchW, aes(x = MAR, y = total_cases/population)) + geom_point() + theme_bw()+
+  xlab("Temperature of March in *C") + ylab("Total Positive Cases") + 
+  ggtitle("Total Cases in Warm Countries with respect to Temperature")
+ggarrange(MarCTCP, MarWTCP)
+
+#Plot of March cases with log on total cases
+MarCTClogP = ggplot(LastMarchC, aes(x = log(MAR), y = log(total_cases/population))) + geom_point() + theme_bw() + 
+  xlab("Temperature of March in *C") + ylab("Total Positive Cases") + 
+  ggtitle("Total Cases in Cold Countries with respect to Temperature")
+MarWTClogP =ggplot(LastMarchW, aes(x = log(MAR), y = log(total_cases))) + geom_point() + theme_bw() +
+  xlab("Temperature of March in *C") + ylab("Total Positive Cases") + 
+  ggtitle("Total Cases in Cold Countries with respect to Temperature")
+ggarrange(MarCTClogP, MarWTClogP)
+
+
+#Plot of March deaths
+MarCTDP = ggplot(LastMarchC, aes(x = MAR, y = total_deaths/population)) + geom_point() + theme_bw() +
+  xlab("Temperature of March in *C") + ylab("Total Deaths") + 
+  ggtitle("Total Deaths in Cold Countries with respect to Temperature")
+MarWTDP = ggplot(LastMarchW, aes(x = MAR, y = total_deaths/population)) + geom_point() + theme_bw()+
+  xlab("Temperature of March in *C") + ylab("Total Deaths") + 
+  ggtitle("Total Deaths in Warm Countries with respect to Temperature")
+ggarrange(MarCTDP, MarWTDP)
+
+#Plot of March cases with log on deaths
+MarCTDlogP = ggplot(LastMarchC, aes(x = MAR, y = log(total_cases/population))) + geom_point() + theme_bw() + 
+  xlab("Temperature of March in *C") + ylab("Total Deaths") + 
+  ggtitle("Total Deaths in Cold Countries with respect to Temperature")
+MarWTDlogP =ggplot(LastMarchW, aes(x = MAR, y = log(total_cases/population))) + geom_point() + theme_bw() +
+  xlab("Temperature of March in *C") + ylab("Total Deaths") + 
+  ggtitle("Total Deaths in Cold Countries with respect to Temperature")
+ggarrange(MarCTDlogP, MarWTDlogP)
+
+#Then running correlation to see if we can find any using Pearson
+# Cold Countries
+cor.test(LastMarchC$total_cases, LastMarchC$MAR)
+cor.test(LastMarchC$total_deaths, LastMarchC$MAR)
+
+# Warm Countries
+cor.test(LastMarchW$total_cases, LastMarchW$MAR)
+cor.test(LastMarchW$total_deaths, LastMarchW$MAR)
+
+```
+
+## Month of April
+```{r, echo=FALSE}
+
+#Gathering last day of the month for April in cold countries
+AddApril = colder %>% filter(month == "04")
+
+#Adding all the total numbers per location
+Aprdf = data.frame(tapply(AddApril$new_cases, AddApril$location, FUN=sum) )
+Aprdf <- tibble::rownames_to_column(Aprdf, "VALUE")
+names(Aprdf)[1] <-"location"
+names(Aprdf)[2] <- "frequency"
+
+AprDdf =data.frame(tapply(AddApril$new_deaths, AddApril$location, FUN=sum) )
+AprDdf = tibble::rownames_to_column(AprDdf, "VALUE")
+names(AprDdf)[1] <-"location"
+names(AprDdf)[2] <- "deathfreq"
+Aprdf = merge(AprDdf, Aprdf, by="location")
+
+LastAprC = merge(Aprdf, AddApril, by="location")
+
+#Gathering last day of the month for April in warm countries
+AddApril = warmer %>% filter(month == "04")
+
+#Adding all the total numbers per location
+Aprdf = data.frame(tapply(AddApril$new_cases, AddApril$location, FUN=sum) )
+Aprdf <- tibble::rownames_to_column(Aprdf, "VALUE")
+names(Aprdf)[1] <-"location"
+names(Aprdf)[2] <- "frequency"
+
+AprDdf =data.frame(tapply(AddApril$new_deaths, AddApril$location, FUN=sum) )
+AprDdf = tibble::rownames_to_column(AprDdf, "VALUE")
+names(AprDdf)[1] <-"location"
+names(AprDdf)[2] <- "deathfreq"
+Aprdf = merge(AprDdf, Aprdf, by="location")
+
+LastAprW = merge(Aprdf, AddApril, by="location")
+
+
+#Map plot for warmer countries in April for total cases
+mapped_data5 <- joinCountryData2Map(LastAprW, joinCode = "ISO3", 
+                                   nameJoinColumn = "iso_code")
+par(mai=c(0,0,0.2,0),xaxs="i",yaxs="i")
+mapCountryData(mapped_data5, nameColumnToPlot = "total_cases", mapTitle="Countries that get warmer in the summer with the distribution of Covid19 Cases")
+
+#Map plot for colder countries in May for total cases
+mapped_data6 <- joinCountryData2Map(LastAprC, joinCode = "ISO3", 
+                                    nameJoinColumn = "iso_code")
+par(mai=c(0,0,0.2,0),xaxs="i",yaxs="i")
+mapCountryData(mapped_data6, nameColumnToPlot = "total_cases", colourPalette =c("white","dodgerblue","dodgerblue1", "dodgerblue2", "dodgerblue3", "dodgerblue4", "blue"), mapTitle="Countries that get colder in the summer with the distribution of Covid19 Cases")
+
+
+#Plot of April cases
+AprCTC = ggplot(LastAprC, aes(x = APR, y = total_cases)) + geom_point() + theme_bw() +
+  xlab("Temperature of April in *C") + ylab("Total Positive Cases") + 
+  ggtitle("Total Cases in Cold Countries with respect to Temperature")
+AprWTC = ggplot(LastAprW, aes(x = APR, y = total_cases)) + geom_point() + theme_bw()+
+  xlab("Temperature of April in *C") + ylab("Total Positive Cases") + 
+  ggtitle("Total Cases in Warm Countries with respect to Temperature")
+ggarrange(AprCTC, AprWTC)
+
+#Plot of April cases with log on total cases
+AprCTClog = ggplot(LastAprC, aes(x = log(APR), y = log(total_cases))) + geom_point() + theme_bw() + 
+  xlab("Temperature of April in *C") + ylab("Total Positive Cases") + 
+  ggtitle("Total Cases in Cold Countries with respect to Temperature")
+AprWTClog =ggplot(LastAprW, aes(x = log(APR), y = log(total_cases))) + geom_point() + theme_bw() +
+  xlab("Temperature of April in *C") + ylab("Total Positive Cases") + 
+  ggtitle("Total Cases in Cold Countries with respect to Temperature")
+ggarrange(AprCTClog, AprWTClog)
+
+#Plot of the Deaths
+
+#Map plot for warmer countries in APR for deaths
+par(mai=c(0,0,0.2,0),xaxs="i",yaxs="i")
+mapCountryData(mapped_data5, nameColumnToPlot = "total_deaths", mapTitle="Countries that get warmer in the summer with the distribution of Covid19 Deaths")
+
+#Map plot for colder countries in APR for deaths
+par(mai=c(0,0,0.2,0),xaxs="i",yaxs="i")
+mapCountryData(mapped_data6, nameColumnToPlot = "total_deaths", colourPalette =c("white","dodgerblue","dodgerblue1", "dodgerblue2", "dodgerblue3", "dodgerblue4", "blue"), mapTitle="Countries that get colder in the summer with the distribution of Covid19 Deaths")
+
+
+#Plot of April deaths
+AprCTD = ggplot(LastAprC, aes(x = APR, y = total_deaths)) + geom_point() + theme_bw() +
+  xlab("Temperature of April in *C") + ylab("Total Deaths") + 
+  ggtitle("Total Deaths in Cold Countries with respect to Temperature")
+AprWTD = ggplot(LastAprW, aes(x = APR, y = total_deaths)) + geom_point() + theme_bw()+
+  xlab("Temperature of April in *C") + ylab("Total Deaths") + 
+  ggtitle("Total Deaths in Warm Countries with respect to Temperature")
+ggarrange(AprCTD, AprWTD)
+
+#Plot of April cases with log on total deaths
+AprCTDlog = ggplot(LastAprC, aes(x = log(APR), y = log(total_cases))) + geom_point() + theme_bw() + 
+  xlab("Temperature of April in *C") + ylab("Total Deaths") + 
+  ggtitle("Total Deaths in Cold Countries with respect to Temperature")
+AprWTDlog =ggplot(LastAprW, aes(x = log(APR), y = log(total_cases))) + geom_point() + theme_bw() +
+  xlab("Temperature of April in *C") + ylab("Total Deaths") + 
+  ggtitle("Total Deaths in Cold Countries with respect to Temperature")
+ggarrange(AprCTDlog, AprWTDlog)
+
+
+#Plot of temperature with cases over population
+
+
+#Plot of April cases
+AprCTCP = ggplot(LastAprC, aes(x = APR, y = total_cases/population)) + geom_point() + theme_bw() +
+  xlab("Temperature of April in *C") + ylab("Total Positive Cases") + 
+  ggtitle("Total Cases in Cold Countries with respect to Temperature")
+AprWTCP = ggplot(LastAprW, aes(x = APR, y = total_cases/population)) + geom_point() + theme_bw()+
+  xlab("Temperature of April in *C") + ylab("Total Positive Cases") + 
+  ggtitle("Total Cases in Warm Countries with respect to Temperature")
+ggarrange(AprCTCP, AprWTCP)
+
+#Plot of April cases with log on total cases
+AprCTClogP = ggplot(LastAprC, aes(x = log(APR), y = log(total_cases/population))) + geom_point() + theme_bw() + 
+  xlab("Temperature of April in *C") + ylab("Total Positive Cases") + 
+  ggtitle("Total Cases in Cold Countries with respect to Temperature")
+AprWTClogP =ggplot(LastAprW, aes(x = log(APR), y = log(total_cases/population))) + geom_point() + theme_bw() +
+  xlab("Temperature of April in *C") + ylab("Total Positive Cases") + 
+  ggtitle("Total Cases in Cold Countries with respect to Temperature")
+ggarrange(AprCTClogP, AprWTClogP)
+
+
+#Plot of April deaths
+AprCTDP = ggplot(LastAprC, aes(x = APR, y = total_deaths/population)) + geom_point() + theme_bw() +
+  xlab("Temperature of April in *C") + ylab("Total Deaths") + 
+  ggtitle("Total Deaths in Cold Countries with respect to Temperature")
+AprWTDP = ggplot(LastAprW, aes(x = APR, y = total_deaths/population)) + geom_point() + theme_bw()+
+  xlab("Temperature of April in *C") + ylab("Total Deaths") + 
+  ggtitle("Total Deaths in Warm Countries with respect to Temperature")
+ggarrange(AprCTDP, AprWTDP)
+
+#Plot of April cases with log on total deaths
+AprCTDlogP = ggplot(LastAprC, aes(x = log(APR), y = log(total_cases/population))) + geom_point() + theme_bw() + 
+  xlab("Temperature of April in *C") + ylab("Total Deaths") + 
+  ggtitle("Total Deaths in Cold Countries with respect to Temperature")
+AprWTDlogP =ggplot(LastAprW, aes(x = log(APR), y = log(total_cases/population))) + geom_point() + theme_bw() +
+  xlab("Temperature of April in *C") + ylab("Total Deaths") + 
+  ggtitle("Total Deaths in Cold Countries with respect to Temperature")
+ggarrange(AprCTDlogP, AprWTDlogP)
+
+
+#Then running correlation to see if we can find any using Pearson
+# Cold Countries
+cor.test(LastAprC$total_cases, LastAprC$APR)
+cor.test(LastAprC$total_deaths, LastAprC$APR)
+
+# Warm Countries
+cor.test(LastAprW$total_cases, LastAprW$APR)
+cor.test(LastAprW$total_deaths, LastAprW$APR)
+
+```
+
+## Month of May
+```{r, echo=FALSE}
+#Gathering last day of the month for May in cold countries
+AddMay = colder %>% filter(month == "05")
+
+#Adding all the total numbers per location
+Maydf = data.frame(tapply(AddMay$new_cases, AddMay$location, FUN=sum) )
+Maydf <- tibble::rownames_to_column(Maydf, "VALUE")
+names(Maydf)[1] <-"location"
+names(Maydf)[2] <- "frequency"
+
+
+AddMay = colder %>% filter(month == "05")
+
+MayDdf =data.frame(tapply(AddMay$new_deaths, AddMay$location, FUN=sum) )
+MayDdf = tibble::rownames_to_column(MayDdf, "VALUE")
+names(MayDdf)[1] <-"location"
+names(MayDdf)[2] <- "deathfreq"
+Maydf = merge(MayDdf, Maydf, by="location")
+
+LastMayC = merge(Maydf, AddMay, by="location")
+
+#Gathering last day of the month for May in warm countries
+AddMay = warmer %>% filter(month == "04")
+
+#Adding all the total numbers per location
+Maydf = data.frame(tapply(AddMay$new_cases, AddMay$location, FUN=sum) )
+Maydf <- tibble::rownames_to_column(Maydf, "VALUE")
+names(Maydf)[1] <-"location"
+names(Maydf)[2] <- "frequency"
+
+MayDdf =data.frame(tapply(AddMay$new_deaths, AddMay$location, FUN=sum) )
+MayDdf = tibble::rownames_to_column(MayDdf, "VALUE")
+names(MayDdf)[1] <-"location"
+names(MayDdf)[2] <- "deathfreq"
+Maydf = merge(MayDdf, Maydf, by="location")
+
+LastMayW = merge(Maydf, AddMay, by="location")
+
+
+#Map plot for warmer countries in May for total cases
+mapped_data7 <- joinCountryData2Map(LastMayW, joinCode = "ISO3", 
+                                   nameJoinColumn = "iso_code")
+par(mai=c(0,0,0.2,0),xaxs="i",yaxs="i")
+mapCountryData(mapped_data7, nameColumnToPlot = "total_cases", mapTitle="Countries that get warmer in the summer with the distribution of Covid19 Cases")
+
+#Map plot for colder countries in May for total cases
+mapped_data8 <- joinCountryData2Map(LastMayC, joinCode = "ISO3", 
+                                    nameJoinColumn = "iso_code")
+par(mai=c(0,0,0.2,0),xaxs="i",yaxs="i")
+mapCountryData(mapped_data8, nameColumnToPlot = "total_cases", colourPalette =c("white","dodgerblue","dodgerblue1", "dodgerblue2", "dodgerblue3", "dodgerblue4", "blue"), mapTitle="Countries that get colder in the summer with the distribution of Covid19 Cases")
+
+
+#Plot of May cases
+MayCTC = ggplot(LastMayC, aes(x = MAY, y = total_cases)) + geom_point() + theme_bw() +
+  xlab("Temperature of May in *C") + ylab("Total Positive Cases") + 
+  ggtitle("Total Cases in Cold Countries with respect to Temperature")
+MayWTC = ggplot(LastMayW, aes(x = MAY, y = total_cases)) + geom_point() + theme_bw()+
+  xlab("Temperature of May in *C") + ylab("Total Positive Cases") + 
+  ggtitle("Total Cases in Warm Countries with respect to Temperature")
+ggarrange(MayCTC, MayWTC)
+
+#Plot of May cases with log on total cases
+MAYCTClog = ggplot(LastMayC, aes(x = log(MAY), y = log(total_cases))) + geom_point() + theme_bw() + 
+  xlab("Temperature of May in *C") + ylab("Total Positive Cases") + 
+  ggtitle("Total Cases in Cold Countries with respect to Temperature")
+MAYWTClog =ggplot(LastMayW, aes(x = log(MAY), y = log(total_cases))) + geom_point() + theme_bw() +
+  xlab("Temperature of May in *C") + ylab("Total Positive Cases") + 
+  ggtitle("Total Cases in Cold Countries with respect to Temperature")
+ggarrange(MAYCTClog, MAYWTClog)
+
+
+
+#Plot of the Deaths
+
+#Map plot for warmer countries in May for deaths
+par(mai=c(0,0,0.2,0),xaxs="i",yaxs="i")
+mapCountryData(mapped_data7, nameColumnToPlot = "total_deaths", mapTitle="Countries that get warmer in the summer with the distribution of Covid19 Deaths")
+
+#Map plot for colder countries in May for total deaths
+
+par(mai=c(0,0,0.2,0),xaxs="i",yaxs="i")
+mapCountryData(mapped_data8, nameColumnToPlot = "total_deaths", colourPalette =c("white","dodgerblue","dodgerblue1", "dodgerblue2", "dodgerblue3", "dodgerblue4", "blue"), mapTitle="Countries that get colder in the summer with the distribution of Covid19 Deaths")
+
+
+#Plot of May deaths
+MayCTD = ggplot(LastMayC, aes(x = MAY, y = total_deaths)) + geom_point() + theme_bw() +
+  xlab("Temperature of May in *C") + ylab("Total Deaths") + 
+  ggtitle("Total Deaths in Cold Countries with respect to Temperature")
+MayWTD = ggplot(LastMayW, aes(x = MAY, y = total_deaths)) + geom_point() + theme_bw()+
+  xlab("Temperature of May in *C") + ylab("Total Deaths") + 
+  ggtitle("Total Deaths in Warm Countries with respect to Temperature")
+ggarrange(MayCTD, MayWTD)
+
+#Plot of May cases with log on total deaths
+MAYCTDlog = ggplot(LastMayC, aes(x = log(MAY), y = log(total_cases))) + geom_point() + theme_bw() + 
+  xlab("Temperature of May in *C") + ylab("Total Deaths") + 
+  ggtitle("Total Deaths in Cold Countries with respect to Temperature")
+MAYWTDlog =ggplot(LastMayW, aes(x = log(MAY), y = log(total_cases))) + geom_point() + theme_bw() +
+  xlab("Temperature of May in *C") + ylab("Total Deaths") + 
+  ggtitle("Total Deaths in Cold Countries with respect to Temperature")
+ggarrange(MAYCTDlog, MAYWTDlog)
+
+#Plot of cases with temperature with cases over population
+#Plot of May cases
+MayCTCP = ggplot(LastMayC, aes(x = MAY, y = total_cases/population)) + geom_point() + theme_bw() +
+  xlab("Temperature of May in *C") + ylab("Total Positive Cases") + 
+  ggtitle("Total Cases in Cold Countries with respect to Temperature")
+MayWTCP = ggplot(LastMayW, aes(x = MAY, y = total_cases/population)) + geom_point() + theme_bw()+
+  xlab("Temperature of May in *C") + ylab("Total Positive Cases") + 
+  ggtitle("Total Cases in Warm Countries with respect to Temperature")
+ggarrange(MayCTCP, MayWTCP)
+
+#Plot of May cases with log on total cases
+MAYCTClogP = ggplot(LastMayC, aes(x = log(MAY), y = log(total_cases/population))) + geom_point() + theme_bw() + 
+  xlab("Temperature of May in *C") + ylab("Total Positive Cases") + 
+  ggtitle("Total Cases in Cold Countries with respect to Temperature")
+MAYWTClogP =ggplot(LastMayW, aes(x = log(MAY), y = log(total_cases/population))) + geom_point() + theme_bw() +
+  xlab("Temperature of May in *C") + ylab("Total Positive Cases") + 
+  ggtitle("Total Cases in Cold Countries with respect to Temperature")
+ggarrange(MAYCTClogP, MAYWTClogP)
+
+
+#Then running correlation to see if we can find any using Pearson
+# Cold Countries
+cor.test(LastMayC$total_cases, LastMayC$MAY)
+cor.test(LastMayC$total_deaths, LastMayC$MAY)
+
+# Warm Countries
+cor.test(LastMayW$total_cases, LastMayW$MAY)
+cor.test(LastMayW$total_deaths, LastMayW$MAY)
+
+```
+
+And now we compare the values from the different months 
+```{r}
+#Warm countries vs Cold Countries
+ggarrange(MarCTC, AprCTC,MayCTC, MarWTD,AprWTD, MayWTD, nrow=3)
+```
+## Cases of that current month over population
+Here we plot the non cumulative
+```{r}
+#Plot of May cases
+MayCTempFreq = ggplot(LastMayC, aes(x = MAY, y = frequency/population)) + geom_point() + theme_bw() +
+  xlab("Temperature of May in *C") + ylab("Total Positive Cases") + 
+  ggtitle("Total Cases in Cold Countries with respect to Temperature")
+MayWTempFreq = ggplot(LastMayW, aes(x = MAY, y = frequency/population)) + geom_point() + theme_bw()+
+  xlab("Temperature of May in *C") + ylab("Total Positive Cases") + 
+  ggtitle("Total Cases in Warm Countries with respect to Temperature")
+ggarrange(MayCTempFreq, MayWTempFreq)
+
+#Plot of May cases with log on total cases
+MayCTempFreqlog = ggplot(LastMayC, aes(x = log(MAY), y = log(frequency/population))) + geom_point() + theme_bw() + 
+  xlab("Temperature of May in *C") + ylab("Total Positive Cases") + 
+  ggtitle("Total Cases in Cold Countries with respect to Temperature")
+MayWTempFreqlog =ggplot(LastMayW, aes(x = log(MAY), y = log(frequency/population))) + geom_point() + theme_bw() +
+  xlab("Temperature of May in *C") + ylab("Total Positive Cases") + 
+  ggtitle("Total Cases in Cold Countries with respect to Temperature")
+ggarrange(MayCTempFreqlog, MayCTempFreqlog)
+```
+## CO2 Level 
+ 
+ Using the most updated from https://data.worldbank.org/ on CO2 Emission in kt of each country, I graphed the relationship between CO2 Levels and Covid19.
+ 
+```{r}
+#Change to Iso code and country name so we can merge it
+names(co2)[names(co2) == "Country.Name"] <- "location"
+names(co2)[names(co2) == "Country.Code"] <- "iso_code"
+
+co2 = merge(df, co2, by=c("location", "iso_code"))
+
+#Take the last day recorded
+co2 = co2[co2$date == max(co2$date),]
+
+#Then plotting total cases with CO and total deaths with CO
+TPCO = ggplot(co2, aes(x = CO, y = total_cases)) + geom_point() + theme_bw() + 
+  xlab("CO2 Emission (kt)") + ylab("Total Positive Cases") + 
+  ggtitle("CO2 Emission with respect to Total Positive Cases")
+
+TDCO = ggplot(co2, aes(x = CO, y = total_deaths)) + geom_point() + theme_bw() +
+  xlab("CO2 Emission (kt)") + ylab("Total Deaths") + 
+  ggtitle("CO2 Emission with respect to Total Deaths")
+
+ggarrange(TPCO, TDCO)
+
+
+
+#Now plotting total cases over population with CO and total deaths over population with CO
+TPCOpop = ggplot(co2, aes(x = CO, y = total_cases/population)) + geom_point() + theme_bw() + xlab("CO2 Emission (kt)") + ylab("Total Positive Cases") + 
+  ggtitle("CO2 Emission with respect to Total Positive Cases")
+TDCOpop = ggplot(co2, aes(x = CO, y = total_deaths/population)) + geom_point() + theme_bw() + xlab("CO2 Emission (kt)") + ylab("Total Deaths") + 
+  ggtitle("CO2 Emission with respect to Total Deaths")
+
+ggarrange(TPCOpop, TDCOpop)
+
+
+#Now using log
+
+TPCOpopL = ggplot(co2, aes(x = log(CO), y = log(total_cases/population))) + geom_point() + theme_bw() + xlab("CO2 Emission (kt)") + ylab("Total Positive Cases") + 
+  ggtitle("CO2 Emission with respect to Total Positive Cases")
+TDCOpopL = ggplot(co2, aes(x = log(CO), y = log(total_deaths/population))) + geom_point() + theme_bw() + xlab("CO2 Emission (kt)") + ylab("Total Deaths") + 
+  ggtitle("CO2 Emission with respect to Total Deaths")
+
+ggarrange(TPCOpopL, TDCOpopL)
+
+#Then running correlation to see if we can find any using Pearson
+cor.test(co2$CO, co2$total_cases)
+cor.test(co2$CO, co2$total_deaths)
+
+scaling = data.frame(scale(co2$CO), scale(co2$total_deaths/co2$population))
+colnames(scaling) <- c("co2", "pop")
+
+ ggplot(scaling, aes(x = co2, y = pop)) + geom_point() + theme_bw() + xlab("CO2 Emission (kt)") + ylab("Total Deaths") + 
+  ggtitle("CO2 Emission with respect to Total Deaths")
+
+```
+## Education Spending
+Gathering the latest data on how much of the GDP is spent on education from https://data.worldbank.org/ I graphed the values. The data is in % of the GDP which is why it is multiplied by the GDP and we use the rate of cases and deaths over population to graph.
+```{r}
+
+#Change column names so they can be merged together
+names(edu)[names(edu) == "Country.Name"] <- "location"
+names(edu)[names(edu) == "Country.Code"] <- "iso_code"
+edu = merge(df, edu, by=c("location", "iso_code"))
+
+#Getting last day of data
+edu = edu[edu$date == max(edu$date),]
+
+#Plotting amount spent on education and total cases over population
+eduTC = ggplot(edu, aes(x =Education*gdp_per_capita, y = total_cases/population)) + geom_point()+ 
+ theme_bw()+
+ ylab("Rate of Cases")+
+ xlab("Spending on Education by Country")+
+  ggtitle("Rate of cases based on the spending on education of each Country")
+
+eduTClog = ggplot(edu, aes(x = log(Education*gdp_per_capita), y = log(total_cases/population))) + geom_point()+ 
+ theme_bw()+
+ ylab("Rate of Cases")+
+ xlab("Spending on Education by Country")+
+  ggtitle("Rate of cases based on the spending on education of each Country")
+
+#Plotting amount spent on education and total deaths over population
+
+eduTD = ggplot(edu, aes(x =Education*gdp_per_capita, y = total_deaths/population)) + geom_point()+ 
+ theme_bw()+
+ ylab("Rate of Deaths")+
+ xlab("Spending on Education by Country")+
+  ggtitle("Rate of cases based on the spending on education of each Country")
+
+
+eduTDlog = ggplot(edu, aes(x = log(Education*gdp_per_capita), y = log(total_deaths/population))) + geom_point()+ 
+ theme_bw()+
+ ylab("Rate of Deaths")+
+ xlab("Spending on Education by Country")+
+  ggtitle("Rate of cases based on the spending on education of each Country")
+
+#Plot without log
+ggarrange(eduTC, eduTD)
+#Plot with log
+ggarrange(eduTClog, eduTDlog)
+
+
+#Correlation test using Pearson
+#Spending over rate of cases
+cor.test(edu$Education * edu$gdp_per_capita, edu$total_cases/edu$population)
+#Spending over rate of deaths
+cor.test(edu$Education * edu$gdp_per_capita, edu$total_deaths/edu$population)
+
+ggplot(edu, aes(x =Education, y = total_cases/population)) + geom_point()+ 
+ theme_bw()+
+ ylab("Rate of Deaths")+
+ xlab("Spending on Education by Country")+
+  ggtitle("Rate of cases based on the spending on education of each Country")
+
+ggplot(edu, aes(x =Education, y = total_deaths/population)) + geom_point()+ 
+ theme_bw()+
+ ylab("Rate of Deaths")+
+ xlab("Spending on Education by Country")+
+  ggtitle("Rate of cases based on the spending on education of each Country")
+
+```
+
+
+Now we want to look more individually for each month of data we have including the total cases and deaths in relation to the temperature of all countries.
+## Month of March
+```{r}
+#Map plot for warmer countries in March for total cases
+mapped_data3 <- joinCountryData2Map(LastMarchW, joinCode = "ISO3", 
+                                    nameJoinColumn = "iso_code")
+par(mai=c(0,0,0.2,0),xaxs="i",yaxs="i")
+mapCountryData(mapped_data3, nameColumnToPlot = "frequency", mapTitle="Countries that get warmer in the summer with the distribution of Covid19 Cases")
+
+#Map plot for colder countries in March for total cases
+mapped_data4 <- joinCountryData2Map(LastMarchC, joinCode = "ISO3", 
+                                    nameJoinColumn = "iso_code")
+par(mai=c(0,0,0.2,0),xaxs="i",yaxs="i")
+mapCountryData(mapped_data4, nameColumnToPlot = "frequency", colourPalette =c("white","dodgerblue","dodgerblue1", "dodgerblue2", "dodgerblue3", "dodgerblue4", "blue"), mapTitle="Countries that get colder in the summer with the distribution of Covid19 Cases")
+
+
+#Plot of March cases
+MarCTC = ggplot(LastMarchC, aes(x = MAR, y = frequency)) + geom_point() + theme_bw() +
+  xlab("Temperature of March in *C") + ylab("Total Positive Cases") + 
+  ggtitle("Total Cases in Cold Countries with respect to Temperature")
+MarWTC = ggplot(LastMarchW, aes(x = MAR, y = frequency)) + geom_point() + theme_bw()+
+  xlab("Temperature of March in *C") + ylab("Total Positive Cases") + 
+  ggtitle("Total Cases in Warm Countries with respect to Temperature")
+ggarrange(MarCTC, MarWTC)
+
+#Plot of March cases with log on total cases
+MarCTClog = ggplot(LastMarchC, aes(x = log(MAR), y = log(frequency))) + geom_point() + theme_bw() + 
+  xlab("Temperature of March in *C") + ylab("Total Positive Cases") + 
+  ggtitle("Total Cases in Cold Countries with respect to Temperature")
+MarWTClog =ggplot(LastMarchW, aes(x = log(MAR), y = log(frequency))) + geom_point() + theme_bw() +
+  xlab("Temperature of March in *C") + ylab("Total Positive Cases") + 
+  ggtitle("Total Cases in Cold Countries with respect to Temperature")
+ggarrange(MarCTClog, MarWTClog)
+
+
+#Plot of the Deaths
+
+#Map plot for warmer countries in March for deaths
+par(mai=c(0,0,0.2,0),xaxs="i",yaxs="i")
+mapCountryData(mapped_data3, nameColumnToPlot = "deathfreq", mapTitle="Countries that get warmer in the summer with the distribution of Covid19 Deaths")
+
+#Map plot for colder countries in March for total deaths
+
+par(mai=c(0,0,0.2,0),xaxs="i",yaxs="i")
+mapCountryData(mapped_data4, nameColumnToPlot = "deathfreq", colourPalette =c("white","dodgerblue","dodgerblue1", "dodgerblue2", "dodgerblue3", "dodgerblue4", "blue"), mapTitle="Countries that get colder in the summer with the distribution of Covid19 Deaths")
+
+
+#Plot of March deaths
+MarCTD = ggplot(LastMarchC, aes(x = MAR, y = deathfreq)) + geom_point() + theme_bw() +
+  xlab("Temperature of March in *C") + ylab("Total Deaths") + 
+  ggtitle("Total Deaths in Cold Countries with respect to Temperature")
+MarWTD = ggplot(LastMarchW, aes(x = MAR, y = deathfreq)) + geom_point() + theme_bw()+
+  xlab("Temperature of March in *C") + ylab("Total Deaths") + 
+  ggtitle("Total Deaths in Warm Countries with respect to Temperature")
+ggarrange(MarCTD, MarWTD)
+
+#Plot of March cases with log on deaths
+MarCTDlog = ggplot(LastMarchC, aes(x = log(MAR), y = log(frequency))) + geom_point() + theme_bw() + 
+  xlab("Temperature of March in *C") + ylab("Total Deaths") + 
+  ggtitle("Total Deaths in Cold Countries with respect to Temperature")
+MarWTDlog =ggplot(LastMarchW, aes(x = log(MAR), y = log(frequency))) + geom_point() + theme_bw() +
+  xlab("Temperature of March in *C") + ylab("Total Deaths") + 
+  ggtitle("Total Deaths in Cold Countries with respect to Temperature")
+ggarrange(MarCTDlog, MarWTDlog)
+
+#Plot of temperature with cases over population
+
+#Plot of March cases
+MarCTCP = ggplot(LastMarchC, aes(x = MAR, y = frequency/population)) + geom_point() + theme_bw() +
+  xlab("Temperature of March in *C") + ylab("Total Positive Cases") + 
+  ggtitle("Total Cases in Cold Countries with respect to Temperature")
+MarWTCP = ggplot(LastMarchW, aes(x = MAR, y = frequency/population)) + geom_point() + theme_bw()+
+  xlab("Temperature of March in *C") + ylab("Total Positive Cases") + 
+  ggtitle("Total Cases in Warm Countries with respect to Temperature")
+ggarrange(MarCTCP, MarWTCP)
+
+#Plot of March cases with log on total cases
+MarCTClogP = ggplot(LastMarchC, aes(x = log(MAR), y = log(frequency/population))) + geom_point() + theme_bw() + 
+  xlab("Temperature of March in *C") + ylab("Total Positive Cases") + 
+  ggtitle("Total Cases in Cold Countries with respect to Temperature")
+MarWTClogP =ggplot(LastMarchW, aes(x = log(MAR), y = log(frequency))) + geom_point() + theme_bw() +
+  xlab("Temperature of March in *C") + ylab("Total Positive Cases") + 
+  ggtitle("Total Cases in Cold Countries with respect to Temperature")
+ggarrange(MarCTClogP, MarWTClogP)
+
+
+#Plot of March deaths
+MarCTDP = ggplot(LastMarchC, aes(x = MAR, y = deathfreq/population)) + geom_point() + theme_bw() +
+  xlab("Temperature of March in *C") + ylab("Total Deaths") + 
+  ggtitle("Total Deaths in Cold Countries with respect to Temperature")
+MarWTDP = ggplot(LastMarchW, aes(x = MAR, y = deathfreq/population)) + geom_point() + theme_bw()+
+  xlab("Temperature of March in *C") + ylab("Total Deaths") + 
+  ggtitle("Total Deaths in Warm Countries with respect to Temperature")
+ggarrange(MarCTDP, MarWTDP)
+
+#Plot of March cases with log on deaths
+MarCTDlogP = ggplot(LastMarchC, aes(x = MAR, y = log(frequency/population))) + geom_point() + theme_bw() + 
+  xlab("Temperature of March in *C") + ylab("Total Deaths") + 
+  ggtitle("Total Deaths in Cold Countries with respect to Temperature")
+MarWTDlogP =ggplot(LastMarchW, aes(x = MAR, y = log(frequency/population))) + geom_point() + theme_bw() +
+  xlab("Temperature of March in *C") + ylab("Total Deaths") + 
+  ggtitle("Total Deaths in Cold Countries with respect to Temperature")
+ggarrange(MarCTDlogP, MarWTDlogP)
+
+#Then running correlation to see if we can find any using Pearson
+# Cold Countries
+cor.test(LastMarchC$frequency, LastMarchC$MAR)
+cor.test(LastMarchC$deathfreq, LastMarchC$MAR)
+
+# Warm Countries
+cor.test(LastMarchW$frequency, LastMarchW$MAR)
+cor.test(LastMarchW$deathfreq, LastMarchW$MAR)
+```
+
+
+## Month of April
+
+```{r}
+#Map plot for warmer countries in April for total cases
+mapped_data5 <- joinCountryData2Map(LastAprW, joinCode = "ISO3", 
+                                    nameJoinColumn = "iso_code")
+par(mai=c(0,0,0.2,0),xaxs="i",yaxs="i")
+mapCountryData(mapped_data5, nameColumnToPlot = "frequency", mapTitle="Countries that get warmer in the summer with the distribution of Covid19 Cases")
+
+#Map plot for colder countries in May for total cases
+mapped_data6 <- joinCountryData2Map(LastAprC, joinCode = "ISO3", 
+                                    nameJoinColumn = "iso_code")
+par(mai=c(0,0,0.2,0),xaxs="i",yaxs="i")
+mapCountryData(mapped_data6, nameColumnToPlot = "frequency", colourPalette =c("white","dodgerblue","dodgerblue1", "dodgerblue2", "dodgerblue3", "dodgerblue4", "blue"), mapTitle="Countries that get colder in the summer with the distribution of Covid19 Cases")
+
+
+#Plot of April cases
+AprCTC = ggplot(LastAprC, aes(x = APR, y = frequency)) + geom_point() + theme_bw() +
+  xlab("Temperature of April in *C") + ylab("Total Positive Cases") + 
+  ggtitle("Total Cases in Cold Countries with respect to Temperature")
+AprWTC = ggplot(LastAprW, aes(x = APR, y = frequency)) + geom_point() + theme_bw()+
+  xlab("Temperature of April in *C") + ylab("Total Positive Cases") + 
+  ggtitle("Total Cases in Warm Countries with respect to Temperature")
+ggarrange(AprCTC, AprWTC)
+
+#Plot of April cases with log on total cases
+AprCTClog = ggplot(LastAprC, aes(x = log(APR), y = log(frequency))) + geom_point() + theme_bw() + 
+  xlab("Temperature of April in *C") + ylab("Total Positive Cases") + 
+  ggtitle("Total Cases in Cold Countries with respect to Temperature")
+AprWTClog =ggplot(LastAprW, aes(x = log(APR), y = log(frequency))) + geom_point() + theme_bw() +
+  xlab("Temperature of April in *C") + ylab("Total Positive Cases") + 
+  ggtitle("Total Cases in Cold Countries with respect to Temperature")
+ggarrange(AprCTClog, AprWTClog)
+
+#Plot of the Deaths
+
+#Map plot for warmer countries in APR for deaths
+par(mai=c(0,0,0.2,0),xaxs="i",yaxs="i")
+mapCountryData(mapped_data5, nameColumnToPlot = "deathfreq", mapTitle="Countries that get warmer in the summer with the distribution of Covid19 Deaths")
+
+#Map plot for colder countries in APR for deaths
+par(mai=c(0,0,0.2,0),xaxs="i",yaxs="i")
+mapCountryData(mapped_data6, nameColumnToPlot = "deathfreq", colourPalette =c("white","dodgerblue","dodgerblue1", "dodgerblue2", "dodgerblue3", "dodgerblue4", "blue"), mapTitle="Countries that get colder in the summer with the distribution of Covid19 Deaths")
+
+
+#Plot of April deaths
+AprCTD = ggplot(LastAprC, aes(x = APR, y = deathfreq)) + geom_point() + theme_bw() +
+  xlab("Temperature of April in *C") + ylab("Total Deaths") + 
+  ggtitle("Total Deaths in Cold Countries with respect to Temperature")
+AprWTD = ggplot(LastAprW, aes(x = APR, y = deathfreq)) + geom_point() + theme_bw()+
+  xlab("Temperature of April in *C") + ylab("Total Deaths") + 
+  ggtitle("Total Deaths in Warm Countries with respect to Temperature")
+ggarrange(AprCTD, AprWTD)
+
+#Plot of April cases with log on total deaths
+AprCTDlog = ggplot(LastAprC, aes(x = log(APR), y = log(frequency))) + geom_point() + theme_bw() + 
+  xlab("Temperature of April in *C") + ylab("Total Deaths") + 
+  ggtitle("Total Deaths in Cold Countries with respect to Temperature")
+AprWTDlog =ggplot(LastAprW, aes(x = log(APR), y = log(frequency))) + geom_point() + theme_bw() +
+  xlab("Temperature of April in *C") + ylab("Total Deaths") + 
+  ggtitle("Total Deaths in Cold Countries with respect to Temperature")
+ggarrange(AprCTDlog, AprWTDlog)
+
+
+#Plot of temperature with cases over population
+
+
+#Plot of April cases
+AprCTCP = ggplot(LastAprC, aes(x = APR, y = frequency/population)) + geom_point() + theme_bw() +
+  xlab("Temperature of April in *C") + ylab("Total Positive Cases") + 
+  ggtitle("Total Cases in Cold Countries with respect to Temperature")
+AprWTCP = ggplot(LastAprW, aes(x = APR, y = frequency/population)) + geom_point() + theme_bw()+
+  xlab("Temperature of April in *C") + ylab("Total Positive Cases") + 
+  ggtitle("Total Cases in Warm Countries with respect to Temperature")
+ggarrange(AprCTCP, AprWTCP)
+
+#Plot of April cases with log on total cases
+AprCTClogP = ggplot(LastAprC, aes(x = log(APR), y = log(frequency/population))) + geom_point() + theme_bw() + 
+  xlab("Temperature of April in *C") + ylab("Total Positive Cases") + 
+  ggtitle("Total Cases in Cold Countries with respect to Temperature")
+AprWTClogP =ggplot(LastAprW, aes(x = log(APR), y = log(frequency/population))) + geom_point() + theme_bw() +
+  xlab("Temperature of April in *C") + ylab("Total Positive Cases") + 
+  ggtitle("Total Cases in Cold Countries with respect to Temperature")
+ggarrange(AprCTClogP, AprWTClogP)
+
+
+#Plot of April deaths
+AprCTDP = ggplot(LastAprC, aes(x = APR, y = deathfreq/population)) + geom_point() + theme_bw() +
+  xlab("Temperature of April in *C") + ylab("Total Deaths") + 
+  ggtitle("Total Deaths in Cold Countries with respect to Temperature")
+AprWTDP = ggplot(LastAprW, aes(x = APR, y = deathfreq/population)) + geom_point() + theme_bw()+
+  xlab("Temperature of April in *C") + ylab("Total Deaths") + 
+  ggtitle("Total Deaths in Warm Countries with respect to Temperature")
+ggarrange(AprCTDP, AprWTDP)
+
+#Plot of April cases with log on total deaths
+AprCTDlogP = ggplot(LastAprC, aes(x = log(APR), y = log(frequency/population))) + geom_point() + theme_bw() + 
+  xlab("Temperature of April in *C") + ylab("Total Deaths") + 
+  ggtitle("Total Deaths in Cold Countries with respect to Temperature")
+AprWTDlogP =ggplot(LastAprW, aes(x = log(APR), y = log(frequency/population))) + geom_point() + theme_bw() +
+  xlab("Temperature of April in *C") + ylab("Total Deaths") + 
+  ggtitle("Total Deaths in Cold Countries with respect to Temperature")
+ggarrange(AprCTDlogP, AprWTDlogP)
+
+
+#Then running correlation to see if we can find any using Pearson
+# Cold Countries
+cor.test(LastAprC$frequency, LastAprC$APR)
+cor.test(LastAprC$deathfreq, LastAprC$APR)
+
+# Warm Countries
+cor.test(LastAprW$frequency, LastAprW$APR)
+cor.test(LastAprW$deathfreq, LastAprW$APR)
+```
+
+## Month of May
+```{r}
+#Map plot for warmer countries in May for total cases
+mapped_data7 <- joinCountryData2Map(LastMayW, joinCode = "ISO3", 
+                                    nameJoinColumn = "iso_code")
+par(mai=c(0,0,0.2,0),xaxs="i",yaxs="i")
+mapCountryData(mapped_data7, nameColumnToPlot = "frequency", mapTitle="Countries that get warmer in the summer with the distribution of Covid19 Cases")
+
+#Map plot for colder countries in May for total cases
+mapped_data8 <- joinCountryData2Map(LastMayC, joinCode = "ISO3", 
+                                    nameJoinColumn = "iso_code")
+par(mai=c(0,0,0.2,0),xaxs="i",yaxs="i")
+mapCountryData(mapped_data8, nameColumnToPlot = "frequency", colourPalette =c("white","dodgerblue","dodgerblue1", "dodgerblue2", "dodgerblue3", "dodgerblue4", "blue"), mapTitle="Countries that get colder in the summer with the distribution of Covid19 Cases")
+
+
+#Plot of May cases
+MayCTC = ggplot(LastMayC, aes(x = MAY, y = frequency)) + geom_point() + theme_bw() +
+  xlab("Temperature of May in *C") + ylab("Total Positive Cases") + 
+  ggtitle("Total Cases in Cold Countries with respect to Temperature")
+MayWTC = ggplot(LastMayW, aes(x = MAY, y = frequency)) + geom_point() + theme_bw()+
+  xlab("Temperature of May in *C") + ylab("Total Positive Cases") + 
+  ggtitle("Total Cases in Warm Countries with respect to Temperature")
+ggarrange(MayCTC, MayWTC)
+
+#Plot of May cases with log on total cases
+MAYCTClog = ggplot(LastMayC, aes(x = log(MAY), y = log(frequency))) + geom_point() + theme_bw() + 
+  xlab("Temperature of May in *C") + ylab("Total Positive Cases") + 
+  ggtitle("Total Cases in Cold Countries with respect to Temperature")
+MAYWTClog =ggplot(LastMayW, aes(x = log(MAY), y = log(frequency))) + geom_point() + theme_bw() +
+  xlab("Temperature of May in *C") + ylab("Total Positive Cases") + 
+  ggtitle("Total Cases in Cold Countries with respect to Temperature")
+ggarrange(MAYCTClog, MAYWTClog)
+
+
+
+#Plot of the Deaths
+
+#Map plot for warmer countries in May for deaths
+par(mai=c(0,0,0.2,0),xaxs="i",yaxs="i")
+mapCountryData(mapped_data7, nameColumnToPlot = "deathfreq", mapTitle="Countries that get warmer in the summer with the distribution of Covid19 Deaths")
+
+#Map plot for colder countries in May for total deaths
+
+par(mai=c(0,0,0.2,0),xaxs="i",yaxs="i")
+mapCountryData(mapped_data8, nameColumnToPlot = "deathfreq", colourPalette =c("white","dodgerblue","dodgerblue1", "dodgerblue2", "dodgerblue3", "dodgerblue4", "blue"), mapTitle="Countries that get colder in the summer with the distribution of Covid19 Deaths")
+
+
+#Plot of May deaths
+MayCTD = ggplot(LastMayC, aes(x = MAY, y = deathfreq)) + geom_point() + theme_bw() +
+  xlab("Temperature of May in *C") + ylab("Total Deaths") + 
+  ggtitle("Total Deaths in Cold Countries with respect to Temperature")
+MayWTD = ggplot(LastMayW, aes(x = MAY, y = deathfreq)) + geom_point() + theme_bw()+
+  xlab("Temperature of May in *C") + ylab("Total Deaths") + 
+  ggtitle("Total Deaths in Warm Countries with respect to Temperature")
+ggarrange(MayCTD, MayWTD)
+
+#Plot of May cases with log on total deaths
+MAYCTDlog = ggplot(LastMayC, aes(x = log(MAY), y = log(frequency))) + geom_point() + theme_bw() + 
+  xlab("Temperature of May in *C") + ylab("Total Deaths") + 
+  ggtitle("Total Deaths in Cold Countries with respect to Temperature")
+MAYWTDlog =ggplot(LastMayW, aes(x = log(MAY), y = log(frequency))) + geom_point() + theme_bw() +
+  xlab("Temperature of May in *C") + ylab("Total Deaths") + 
+  ggtitle("Total Deaths in Cold Countries with respect to Temperature")
+ggarrange(MAYCTDlog, MAYWTDlog)
+
+#Plot of cases with temperature with cases over population
+#Plot of May cases
+MayCTCP = ggplot(LastMayC, aes(x = MAY, y = frequency/population)) + geom_point() + theme_bw() +
+  xlab("Temperature of May in *C") + ylab("Total Positive Cases") + 
+  ggtitle("Total Cases in Cold Countries with respect to Temperature")
+MayWTCP = ggplot(LastMayW, aes(x = MAY, y = frequency/population)) + geom_point() + theme_bw()+
+  xlab("Temperature of May in *C") + ylab("Total Positive Cases") + 
+  ggtitle("Total Cases in Warm Countries with respect to Temperature")
+ggarrange(MayCTCP, MayWTCP)
+
+#Plot of May cases with log on total cases
+MAYCTClogP = ggplot(LastMayC, aes(x = log(MAY), y = log(frequency/population))) + geom_point() + theme_bw() +
+  xlab("Temperature of May in *C") + ylab("Total Positive Cases") + 
+  ggtitle("Total Cases in Cold Countries with respect to Temperature")
+MAYWTClogP =ggplot(LastMayW, aes(x = log(MAY), y = log(frequency/population))) + geom_point() + theme_bw() +
+  xlab("Temperature of May in *C") + ylab("Total Positive Cases") + 
+  ggtitle("Total Cases in Cold Countries with respect to Temperature")
+ggarrange(MAYCTClogP, MAYWTClogP)
+```
