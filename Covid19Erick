@@ -1,0 +1,762 @@
+library(tidyverse)
+library(tidycensus)
+library(ggplot2)
+library(dplyr)
+library(ggpubr)
+library(ggrepel)
+library(data.table)
+
+#### CSV and modifying the  CSV  ----
+CovidData = read_csv("https://covidtracking.com/api/v1/states/daily.csv") #retrieve census data
+census_api_key("a621d043aa8ef61377cb4467ff8df3b008ca9971", install) 
+state_population <- get_estimates("state", "population", output = "wide", year = 2019)
+names(state_population) <- c("fips", "location", "population", "density")
+
+NAME <- c("American Samoa", "Northern Mariana Islands", "Guam", "U.S. Virgin Islands") #Creating fips vector
+GEOID <- c(60, 69, 66, 78) #Creating 2018 Population Vector
+POP <- c(55519, 51433, 159358, 106405) #Empty density vector
+DEN <- c(0,0,0,0) #Add into dataframe
+missing= data.frame(GEOID, NAME, POP, DEN) #Change the names so they match
+names(missing) <- c("fips", "location", "population", "density") #Put them all together
+rbind(state_population, as.tibble(missing), by=c("GEOID","NAME", "POP", "DEN"))
+states = merge(CovidData, state_population, by =  "fips")
+
+states$month = substr(states$date, 1, nchar(states$date) - 2) # remove day of month
+Temp = read.csv("StatesAverageTemp.csv")
+Temp$date = gsub("-", "", Temp$date) # Remove year and hyphen
+names(Temp)[names(Temp) == 'ï..location' ]<- "location"
+names(Temp)[names(Temp) == 'date' ]<- "month"
+states = merge(states, Temp, by = c("month", "location")) #last (corrected) data frame
+
+#change dates
+dates = as.character(states$date)
+states$date = as.Date(dates, "%Y%m%d")
+GDP = read_csv("GDPstates.csv", skip=4) #Read csv skip the first four lines (title header thing)
+#Change column names
+names(GDP)[names(GDP) == "GeoName"] <- "location"
+names(GDP)[names(GDP) == "2019"] <- "gdp"
+#Filter for column we want and make a dataframe with the values we would like to include in our merge
+GDP = GDP %>% filter(Description == "Real GDP (millions of chained 2012 dollars)")
+GDP = data.frame(GDP[2], GDP[5])
+as.numeric(GDP[,2]) -> GDP[,2]
+#Merge by location
+states = merge(GDP,states, by="location")
+
+#### [cases by population] ---- 
+
+states %>% 
+  ggplot(aes(date, positiveIncrease/population, col = state)) +
+  geom_point() + xlab("Months of 2020") + ylab("PositiveIncrease Cases/ Population") + 
+  ggtitle("Cases by population of covid-19 in USA and territories in 2020")
+#Southern States of interest
+FL_CP = states %>% filter( location == "Florida") %>% filter(date > "2020-03-15") %>%
+  ggplot(aes(date, positiveIncrease/population)) + geom_point() + geom_point()  + ylab("PositiveIncrease Cases/ Pop.") + 
+  ggtitle("Cases/population ratio in Florida") 
+
+TX_CP = states %>% filter( location == "Texas") %>% filter(date > "2020-03-15") %>%
+  ggplot(aes(date, positiveIncrease/population)) + geom_point() + geom_point()  + ylab("PositiveIncrease Cases/ Pop.") + 
+  ggtitle("Cases/population ratio in Texas")
+
+AZ_CP = states %>% filter( location == "Arizona") %>% filter(date > "2020-03-15") %>% 
+  ggplot(aes(date, positiveIncrease/population)) + geom_point() + geom_point()  + ylab("PositiveIncrease Cases/ Pop") + 
+  ggtitle("Cases/population ratio in Arizona")
+
+AL_CP = states %>% filter( location == "Alabama") %>% filter(date > "2020-03-15") %>%
+  ggplot(aes(date, positiveIncrease/population)) + geom_point() + geom_point() + ylab("PositiveIncrease Cases/ Pop.") + 
+  ggtitle("Cases/population ratio in Alabama")
+
+ggarrange(FL_CP, TX_CP, AZ_CP, AL_CP)
+
+
+#Northern states of interest
+WA_CP = states %>% filter( location == "Washington") %>% filter(date > "2020-03-15") %>%
+  ggplot(aes(date, positiveIncrease/population))  + geom_point() + ylab("PositiveIncrease Cases/ Pop.") + 
+  ggtitle("Cases/population ratio in Washington")
+
+NY_CP = states %>% filter( location == "New York") %>% filter(date > "2020-03-15") %>%
+  ggplot(aes(date, positiveIncrease/population)) + geom_point() + ylab("PositiveIncrease Cases/ Pop.") + 
+  ggtitle("Cases/population ratio in New York")
+
+MN_CP = states %>% filter( location == "Minnesota") %>% filter(date > "2020-03-15") %>%
+  ggplot(aes(date, positiveIncrease/population)) + geom_point() + ylab("PositiveIncrease Cases/ Pop.") + 
+  ggtitle("Cases/population ratio in Minnesota")
+
+MA_CP = states %>% filter( location == "Massachusetts") %>% filter(date > "2020-03-15") %>%
+  ggplot(aes(date, positiveIncrease/population)) + geom_point() + ylab("PositiveIncrease Cases/ Pop.") + 
+  ggtitle("Cases/population ratio in Massachusetts")
+
+ggarrange(WA_CP, NY_CP, MN_CP, MA_CP)
+
+
+
+#Northern states of interest
+WA_CP = states %>% filter( location == "Washington") %>% filter(date > "2020-03-20") %>%
+  ggplot(aes(date, log(positiveIncrease/population)))  + geom_point() + ylab("positiveIncrease cases") + 
+  ggtitle("Cases/population ratio in Washington")
+
+NY_CP = states %>% filter( location == "New York") %>% filter(date > "2020-03-20") %>%
+  ggplot(aes(date, positiveIncrease/population)) + geom_point() + ylab("positiveIncrease cases") + 
+  ggtitle("Cases/population ratio in New York")
+
+MN_CP = states %>% filter( location == "Minnesota") %>% filter(date > "2020-03-20") %>%
+  ggplot(aes(date, positiveIncrease/population)) + geom_point() + ylab("positiveIncrease cases") + 
+  ggtitle("Cases/population ratio in Minnesota")
+
+MA_CP = states %>% filter( location == "Massachusetts") %>% filter(date > "2020-03-20") %>%
+  ggplot(aes(date, positiveIncrease/population)) + geom_point() + ylab("positiveIncrease cases") + 
+  ggtitle("Cases/population ratio in Massachusetts")
+
+
+#### [death by population]----
+states %>%
+  ggplot(aes(date, deathIncreaseIncrease/population, col = location)) +
+  geom_point() + xlab("Months of 2020") + ylab("deathIncrease/ Population") + 
+  ggtitle("deathIncreases by population  ratio of covid-19 in USA and territories in 2020")
+
+#Southern States of interest
+FL_DP = states %>% filter( location == "Florida") %>% filter(date > "2020-03-20") %>%
+  ggplot(aes(date, deathIncrease/population))  + geom_point() +  xlab("Months in 2020") + ylab("Death Increase/ Pop.") + 
+  ggtitle("DeathIncrease/population ratio in Florida")
+
+TX_DP = states %>% filter( location == "Texas") %>% filter(date > "2020-03-20") %>%
+  ggplot(aes(date, deathIncrease/population))  + geom_point() + xlab("Months in 2020") + ylab("Death Increase/ Pop.") + 
+  ggtitle("DeathIncrease/population ratio in Texas")
+
+AZ_DP = states %>% filter( location == "Arizona") %>% filter(date > "2020-03-20") %>%
+  ggplot(aes(date, deathIncrease/population))  + geom_point() +  xlab("Months in 2020") + ylab("Death Increase/ Pop.") + 
+  ggtitle("Death/population ratio in Arizona")
+
+AL_DP = states %>% filter( location == "Alabama") %>% filter(date > "2020-03-20") %>%
+  ggplot(aes(date, deathIncrease/population))  + geom_point() + xlab("Months in 2020") + ylab("Death Increase/ Pop.") + 
+  ggtitle("Death/population ratio in Alabama")
+
+ggarrange(FL_DP, TX_DP, AZ_DP, AL_DP)
+
+
+#Northern states of interest
+WA_DP = states %>% filter( location == "Washington") %>% filter(date > "2020-03-15") %>%
+  ggplot(aes(date, deathIncrease/population))  + geom_point() + xlab("Months in 2020") + ylab("Death Increase/ Pop.") + 
+  ggtitle("death/population ratio in Washington")
+
+NY_DP = states %>% filter( location == "New York") %>% filter(date > "2020-03-15") %>%
+  ggplot(aes(date, deathIncrease/population)) + geom_point() +  xlab("Months in 2020") + ylab("Death Increase/ Pop.") + 
+  ggtitle("death/population ratio in New York")
+
+MN_DP = states %>% filter( location == "Minnesota") %>% filter(date > "2020-03-15") %>%
+  ggplot(aes(date, deathIncrease/population)) + geom_point() + xlab("Months in 2020") + ylab("Death Increase/ Pop.") + 
+  ggtitle("death/population ratio in Minnesota")
+
+MA_DP = states %>% filter( location == "Massachusetts") %>% filter(date > "2020-03-15") %>%
+  ggplot(aes(date, deathIncrease/population)) + geom_point() +  xlab("Months in 2020") + ylab("Death Increase/ Pop.") + 
+  ggtitle("death/population ratio in Massachusetts")
+
+ggarrange(WA_DP, NY_DP, MN_DP, MA_DP)
+
+
+#### Code for individual states [Cases/test] ----
+
+states %>%
+  ggplot(aes(date, positiveIncrease/totalTestResults, col = location)) +
+  geom_point()+ xlab("Months of 2020") + ylab("positiveIncrease cases/ Test Results") + 
+  ggtitle("Cases by amount of testing for covid-19 in USA and territories in 2020")
+
+
+#Some Southern States 
+
+FL = states %>% 
+  filter( location == "Florida") %>%
+  ggplot(aes(date, positiveIncrease/totalTestResults)) + geom_point() +
+  xlab("Month of 2020") + ylab("Cases/ Testing") + ylim(0,1.00) +
+  ggtitle("Florida state cases versus testing of covid-19 in 2020")
+
+TX = states %>% 
+  filter( location == "Texas") %>%
+  ggplot(aes(date, positiveIncrease/totalTestResults)) + geom_point() +
+  xlab("Month of 2020") + ylab("Cases/ Testing") + ylim(0,1.00) +
+  ggtitle("Texas state cases versus testing of covid-19 in 2020")
+
+AR = states %>% 
+  filter( location == "Arizona") %>%
+  ggplot(aes(date, positiveIncrease/totalTestResults)) + geom_point() +
+  xlab("Month of 2020") + ylab("Cases/ Testing") + ylim(0,1.00) +
+  ggtitle("Arizona state cases versus testing of covid-19 in 2020")
+
+
+AL = states %>% 
+  filter( location == "Alabama") %>%
+  ggplot(aes(date, positiveIncrease/totalTestResults)) + geom_point() +
+  xlab("Month of 2020") + ylab("Cases/ Testing") + ylim(0,1.00) +
+  ggtitle("Alabama state cases versus testing of covid-19 in 2020")
+
+
+
+ggarrange(AL, AR, FL, TX)
+
+#Some northern States 
+WA = states %>% 
+  filter( location == "Washington") %>%
+  ggplot(aes(date, positiveIncrease/totalTestResults)) + geom_point() +
+  xlab("Month of 2020") + ylab("Cases/ Testing") + ylim(0,1.00) + 
+  ggtitle("Washington state cases versus testing of covid-19 in 2020")
+
+MN = states %>% 
+  filter( location == "Minnesota") %>%
+  ggplot(aes(date, positiveIncrease/totalTestResults)) + geom_point() +
+  xlab("Month of 2020") + ylab("Cases/ Testing") + ylim(0,1.00) +
+  ggtitle("Minnesota state cases versus testing of covid-19 in 2020")
+
+NY = states %>% 
+  filter( location == "New York") %>%
+  ggplot(aes(date, positiveIncrease/totalTestResults)) + geom_point() +
+  xlab("Month of 2020") + ylab("Cases/ Testing") + ylim(0,1.00) +
+  ggtitle("New York state cases versus testing of covid-19 in 2020")
+
+MA = states %>% 
+  filter( location == "Massachusetts") %>%
+  ggplot(aes(date, positiveIncrease/totalTestResults)) + geom_point() +
+  xlab("Month of 2020") + ylab("Cases/ Testing") + ylim(0,1.00) +
+  ggtitle("Massachusetts state cases versus testing of covid-19 in 2020")
+
+ggarrange(WA, MN, NY, MA)
+
+
+###################### Better plots #########################
+#### Some Interesting plots ----
+states$state = state.abb[match(states$location,state.name)]
+
+states %>% group_by(month) %>% group_by(location) %>% 
+  filter(positiveIncrease == max(positiveIncrease)) %>%
+  ggplot(aes(temperature, positiveIncrease/population)) + 
+  geom_text(aes(label=state), show_guide=F) + 
+  geom_point() + xlab("Temperature (C)") + ylab("Cases/Population") + 
+  ggtitle("Max recorded cases on temperature") +theme(legend.position="none")
+
+
+
+states %>% group_by(month) %>% group_by(location) %>% 
+  filter(positiveIncrease == max(positiveIncrease))  %>%
+  ggplot(aes(temperature, positiveIncrease, col = location)) +
+  geom_point() + xlab("Temperature") + ylab("deathIncrease") + 
+  ggtitle("death in the U.S. versus temeprature ")
+
+
+
+#interesting states!
+FL_PTemp = states %>% filter( location == "Florida") %>% group_by(month) %>%
+  filter(positiveIncrease == max(positiveIncrease)) %>%
+  ggplot(aes(temperature, positiveIncrease)) + geom_line() + geom_point() +
+  xlim(c(50,80)) +  xlab("Temperature") + ylab("positiveIncrease cases") + 
+  ggtitle("positive cases in the state of Florida versus temeprature")
+
+TX_PTemp = states %>% filter( location == "Texas") %>% group_by(month) %>% 
+  filter(positiveIncrease == max(positiveIncrease)) %>%
+  ggplot(aes(temperature, positiveIncrease)) + geom_line() + geom_point()  
+  xlim(c(50,80)) +  xlab("Temperature") + ylab("positiveIncrease cases") + 
+  ggtitle("positive cases in the state of Texas versus temeprature")
+
+AZ_Temp = states %>% filter( location == "Arizona") %>% group_by(month) %>% 
+  filter(positiveIncrease == max(positiveIncrease)) %>%
+  ggplot(aes(temperature, positiveIncrease)) + geom_line() + geom_point()  
+  xlim(c(50,80)) +  xlab("Temperature") + ylab("positiveIncrease cases") + 
+  ggtitle("positive cases in the state of Arizona versus temeprature")
+
+AL_Temp = states %>% filter( location == "Alabama") %>% group_by(month) %>% 
+  filter(positiveIncrease == max(positiveIncrease)) %>%
+  ggplot(aes(temperature, positiveIncrease)) + geom_line() + geom_point()  
+  xlim(c(50,80)) +  xlab("Temperature") + ylab("positiveIncrease cases") + 
+  ggtitle("positiveIncrease cases in the state of Alabama versus temeprature")
+
+ggarrange(FL_PTemp, TX_PTemp, AZ_Temp, AL_Temp)
+
+
+WA_PTemp = states %>% filter( location == "Washington")  %>% group_by(month) %>% 
+  filter(positiveIncrease == max(positiveIncrease)) %>%
+  ggplot(aes(temperature, positiveIncrease)) + geom_line() + geom_point() + ylim(0,380000) + 
+  xlim(c(30,60)) + xlab("Temperature") + ylab("positiveIncrease cases") + 
+  ggtitle("positiveIncrease cases in the state of Washington versus temeprature")
+
+NY_PTemp = states %>% filter( location == "New York") %>% group_by(month) %>% 
+  filter(positiveIncrease == max(positiveIncrease)) %>%
+  ggplot(aes(temperature, positiveIncrease)) + geom_line() + geom_point() + ylim(0,380000) + 
+  xlim(c(30,60)) + xlab("Temperature") + ylab("positiveIncrease cases") +  
+  ggtitle("positiveIncrease cases in the state of New York versus temeprature")
+
+MN_Temp = states %>% filter( location == "Minnesota") %>% group_by(month) %>% 
+  filter(positiveIncrease == max(positiveIncrease)) %>%
+  ggplot(aes(temperature, positiveIncrease)) + geom_line() + geom_point() + ylim(0,380000) + 
+  xlim(c(30,60)) + xlab("Temperature") + ylab("positiveIncrease cases") + 
+  ggtitle("positiveIncrease cases in the state of Minnesota versus temeprature")
+
+MA_Temp = states %>% filter( location == "Massachusetts") %>% group_by(month) %>% 
+  filter(positiveIncrease == max(positiveIncrease)) %>%
+  ggplot(aes(temperature, positiveIncrease)) + geom_line() + geom_point() + ylim(0,380000) + 
+  xlim(c(30,60)) + xlab("Temperature") + ylab("positiveIncrease cases") + 
+  ggtitle("positiveIncrease cases in the state of Massachusetts versus temeprature")
+
+ggarrange(WA_PTemp, NY_PTemp, MN_Temp, MA_Temp)
+
+
+ 
+### positiveIncrease/ total
+FL_Temp_P_T = states %>% filter( location == "Florida") %>%
+  ggplot(aes(temperature, positiveIncrease/total)) + ylim(0,1) +
+  geom_point() + xlab("Temperature") + ylab("positiveIncrease cases/Total testingg") + 
+  ggtitle("positiveIncrease cases by total testing in the state of Florida versus temeprature")
+
+TX_Temp_P_T = states %>% filter( location == "Texas") %>%
+  ggplot(aes(temperature, positiveIncrease/total)) + ylim(0,1) +
+  geom_point() + xlab("Temperature") + ylab("positiveIncrease cases/Total testig") + 
+  ggtitle("positiveIncrease cases by total testing in the state of Texas versus temeprature")
+
+AZ_Temp_P_T = states %>% filter( location == "Arizona") %>%
+  ggplot(aes(temperature, positiveIncrease/total)) + ylim(0,1) +
+  geom_point() + xlab("Temperature") + ylab("positiveIncrease cases/Total testing") + 
+  ggtitle("positiveIncrease cases by total testing in the state of Arizona versus temeprature")
+
+AL_Temp_P_T = states %>% filter( location == "Alabama") %>%
+  ggplot(aes(temperature, positiveIncrease/total)) + ylim(0,1) +
+  geom_point() + xlab("Temperature") + ylab("positiveIncrease cases/Total testing") + 
+  ggtitle("positiveIncrease cases by total testing in the state of Alabama versus temeprature")
+
+ggarrange(FL_Temp_P_T, TX_Temp_P_T, AZ_Temp_P_T, AL_Temp_P_T)
+
+#### cases/pop vs. temp ---- 
+
+### Month of March vs temp ###
+state_population = state_population[,-c(1,4)]
+
+March = states %>% group_by(month) %>% group_by(location) %>% 
+  filter(month == "202003")  #filtering states by March.  
+Marchdf = aggregate(March$positiveIncrease, 
+  list(location = March$location), FUN = sum) #Aggregating the cases by March.
+TempM = Temp %>%  filter(month =="202003") #Temp by month.
+Marchdf = merge(Marchdf, TempM, "location")
+Marchdf = merge(Marchdf, state_population, "location") #Creating a data frame.
+Marchdf = mutate(Marchdf, CasesPopRatio = x/population)
+names(Marchdf)[names(Marchdf) == 'x' ]<- "TotalCasesMarch"
+Marchdf$state = state.abb[match(Marchdf$location,state.name)]
+
+
+MarchTemp = ggscatter(Marchdf, x = 'temperature', 'CasesPopRatio',
+          xlab = "Temperature (ºC)", ylab = "Cases/Population Ratio",
+          add = "reg.line", conf.int = TRUE, label = "state",
+          cor.coef = TRUE, cor.method = "pearson",
+          title="Cases over population ration of March\n in the U.S. versus temperature")
+
+### Month of April vs temp ###
+April = states %>% group_by(month) %>% group_by(location) %>% 
+  filter(month == "202004")  #filtering states by April.  
+Aprildf = aggregate(April$positiveIncrease, 
+                    list(location = April$location), FUN = sum) #Aggregating the cases by April.
+TempA = Temp %>%  filter(month =="202004") #Temp by month.
+Aprildf = merge(Aprildf, TempA, "location")
+Aprildf = merge(Aprildf, state_population, "location") #Creating a data frame.
+Aprildf = mutate(Aprildf, CasesPopRatio = x/population)
+names(Aprildf)[names(Aprildf) == 'x' ]<- "TotalCasesApril"
+Aprildf$state = state.abb[match(Aprildf$location,state.name)]
+
+AprilTemp = ggscatter(Aprildf, x = 'temperature', y ='CasesPopRatio',
+          add = "reg.line", conf.int = TRUE,  label = "state",
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "Temperature (ºC)", ylab = "Cases/Popuaion Ratio",
+          title="Cases over population ration of April\n in the U.S. versus temperature")
+
+
+### Month of May vs temp ###
+May = states %>% group_by(month) %>% group_by(location) %>% 
+  filter(month == "202005")  #filtering states by May.  
+Maydf = aggregate(May$positiveIncrease, 
+                    list(location = May$location), FUN = sum) #Aggregating the cases by May.
+TempMay = Temp %>%  filter(month =="202005") #Temp by month.
+Maydf = merge(Maydf, TempMay, "location") 
+Maydf = merge(Maydf, state_population, "location") #Creating a data frame.
+Maydf = mutate(Maydf, CasesPopRatio = x/population)
+names(Maydf)[names(Maydf) == 'x' ]<- "TotalCasesMay"
+Maydf$state = state.abb[match(Maydf$location,state.name)]
+
+MayTemp = ggscatter(Maydf, x = 'temperature', y ='CasesPopRatio',
+          add = "reg.line", conf.int = TRUE, label = "state",
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "Temperature  (ºC)", ylab = "Cases/Popuaion Ratio",
+          title="Cases over population ration of May\n in the U.S. versus temperature")
+
+
+
+ggarrange(MarchTemp, AprilTemp, MayTemp)
+
+#### cases/pop vs. GDP ----
+
+#Month of March! 
+March = states %>% group_by(month) %>% group_by(location) %>% 
+  filter(month == "202003")  #filtering states by March.  
+Marchdf = aggregate(March$positiveIncrease, 
+                    list(location = March$location), FUN = sum) #Aggregating the cases by March.
+Marchdf = merge(Marchdf, state_population, "location") #Creating a data frame.
+Marchdf = mutate(Marchdf, CasesPopRatio = x/population)
+Marchgdp = merge(Marchdf, GDP , "location") #Creating a data frame.
+Marchgdp = as.tibble(Marchgdp)
+names(Marchgdp)[names(Marchgdp) == 'x' ]<- "TotalCasesMarch"
+Marchgdp$state = state.abb[match(Marchgdp$location,state.name)]
+Marchgdp = mutate(Marchgdp, GDPper_capita = gdp/population)
+
+MarchGDP = Marchgdp %>% 
+  ggscatter('GDPper_capita', 'CasesPopRatio',  
+  add = "reg.line", conf.int = TRUE, label = "state", 
+  cor.coef = TRUE, cor.method = "pearson",
+  xlab = "GDP per capita", ylab = "Total Cases/Population",
+  title="Total cases over population ratio of March in the U.S. vs. GDP") 
+  
+
+#Month of April! 
+April = states %>% group_by(month) %>% group_by(location) %>% 
+  filter(month == "202004")  #filtering states by April.  
+Aprilgdp = aggregate(April$positiveIncrease, 
+                    list(location = April$location), FUN = sum) #Aggregating the cases by March.
+Aprilgdp = merge(Aprilgdp, state_population, "location") #Creating a data frame.
+Aprilgdp = mutate(Aprilgdp, CasesPopRatio = x/population)
+Aprilgdp = merge(Aprilgdp, GDP , "location") #Creating a data frame.
+Aprilgdp = as.tibble(Aprilgdp)
+names(Aprilgdp)[names(Aprilgdp) == 'x' ]<- "TotalCasesApril"
+Aprilgdp$state = state.abb[match(Aprilgdp$location,state.name)]
+Aprilgdp = mutate(Aprilgdp, GDPper_capita = gdp/population)
+
+
+AprilGDP = Aprilgdp %>%
+  ggscatter('gdp', 'CasesPopRatio', 
+            add = "reg.line", conf.int = TRUE, label = "state", 
+            cor.coef = TRUE, cor.method = "pearson",
+            xlab = "GDP", ylab = "Total Cases/Population",
+            title="Total cases over population ratio of April in the U.S. vs. GDP") + rotate_x_text()
+
+
+#Month of May! 
+May= states %>% group_by(month) %>% group_by(location) %>% 
+  filter(month == "202005")  #filtering states by March.  
+Maygdp = aggregate(May$positiveIncrease, 
+                    list(location = May$location), FUN = sum) #Aggregating the cases by March.
+Maygdp = merge(Maygdp, state_population, "location") #Creating a data frame.
+Maygdp = mutate(Maygdp, CasesPopRatio = x/population)
+Maygdp = merge(Maygdp, GDP , "location") #Creating a data frame.
+Maygdp = as.tibble(Maygdp)
+names(Maygdp)[names(Maygdp) == 'x' ]<- "TotalCasesMay"
+Maygdp$state = state.abb[match(Maygdp$location,state.name)]
+Maygdp = mutate(Maygdp, GDPper_capita = gdp/population)
+
+
+MayGDP = Maygdp %>% 
+  ggscatter('gdp', 'CasesPopRatio', 
+            add = "reg.line", conf.int = TRUE, label = 'state',
+            cor.coef = TRUE, cor.method = "pearson",  
+            xlab = "GDP", ylab = "Total Cases/Population",
+            title="Total cases over population ratio of May in the U.S. vs. GDP") 
+
+
+
+ggarrange(MarchGDP, AprilGDP, MayGDP)
+
+#### [log(cases/pop) vs Temp] ----
+
+Marchdf[,6] = log(Marchdf[,6])
+Aprildf[,6] = log(Aprildf[,6])
+Maydf[,6] = log(Maydf[,6])
+
+#Month of March!
+MarchTempLog =   ggscatter(Marchdf,'temperature', 'CasesPopRatio',
+                      add = "reg.line", conf.int = TRUE,  label = 'state', 
+                      cor.coef = TRUE, cor.method = "pearson", 
+                      ylim = c(-10, -4), xlim = c(35, 75), 
+                      xlab = "Temperature (ºC)", ylab = "Log(cases/ population)",
+                      title="Log(cases/ population) in March in the U.S. vs. temp.")
+
+#Month of April!
+AprilTempLog = ggscatter(Aprildf, x = 'temperature', y ='CasesPopRatio',
+                      add = "reg.line", conf.int = TRUE,  label = 'state',  
+                      cor.coef = TRUE, cor.method = "pearson", 
+                      ylim = c(-10, -4),  xlim = c(35, 75), 
+                      xlab = "Temperature (ºC)", ylab = "Log(cases/ population)",
+                      title=  "Log(cases/ population) in April in the U.S. vs. temp.")
+
+
+#Month of May! 
+MayTempLog = ggscatter(Maydf, x = 'temperature', y ='CasesPopRatio',
+                    add = "reg.line", conf.int = TRUE,  label = 'state',  
+                    cor.coef = TRUE, cor.method = "pearson", 
+                    ylim = c(-10, -4),  xlim = c(35, 75), 
+                    xlab = "Temperature (ºC)", ylab = "Log(cases/ population)",
+                    title="Log(cases/ population) in May in the U.S. vs. temp.")
+
+ggarrange(MarchTempLog, AprilTempLog, MayTempLog)
+#### [log(cases/pop) vs GDP] ----
+
+
+Marchgdp[,4] = log(Marchgdp[,4])
+Aprilgdp[,4] = log(Aprilgdp[,4])
+Maygdp[,4] = log(Maygdp[,4])
+
+#Month of March!
+MarchGDPLog = Marchgdp %>% 
+  ggscatter('GDPper_capita', 'CasesPopRatio',  
+            add = "reg.line", conf.int = TRUE,  label = 'state',
+            cor.coef = TRUE, cor.method = "pearson",
+            xlab = "GDP per capita", ylab = "Log(cases/ population)", ylim = c(-10, -4), 
+            title="Log(cases/ population) in March in the U.S. vs. GDP per capita") 
+
+
+#Month of April! 
+AprilGDPLog = Aprilgdp %>%
+  ggscatter('GDPper_capita', 'CasesPopRatio', 
+            add = "reg.line", conf.int = TRUE,  label = 'state',
+            cor.coef = TRUE, cor.method = "pearson",
+            xlab = "GDP per capita", ylab = "Log(cases/ population)", ylim = c(-10, -4),
+            title="Log(cases/ population) in April in the U.S. vs. GDP per capita") 
+
+
+#Month of May! 
+MayGDPLog = Maygdp %>% 
+  ggscatter('GDPper_capita', 'CasesPopRatio', 
+            add = "reg.line", conf.int = TRUE,  label = 'state',
+            cor.coef = TRUE, cor.method = "pearson",  
+            xlab = "GDP per capita", ylab = "Log(cases/ population)", ylim = c(-10, -4),
+            title="Log(cases/ population) in May in the U.S. vs. GDP per capita") 
+
+
+
+ggarrange(MarchGDPLog, AprilGDPLog, MayGDPLog)
+
+#### deaths/pop vs. temp ----
+
+#Month of march!
+March = states %>% group_by(month) %>% group_by(location) %>% 
+  filter(month == "202003")  #filtering states by March.  
+Marchdf = aggregate(March$positiveIncrease, 
+                    list(location = March$location), FUN = sum) #Aggregating the cases by March.
+Marchdf1 = aggregate(March$deathIncrease, 
+                     list(location = March$location), FUN = sum)
+Marchdf1 = merge(Marchdf, Marchdf1, "location")
+names(Marchdf1)[names(Marchdf1) == 'x.x' ]<- "TotalCasesMarch"
+names(Marchdf1)[names(Marchdf1) == 'x.y' ]<- "TotalDeathsMarch"
+TempM = Temp %>%  filter(month =="202003") #Temp by month.
+Marchdf1 = merge(Marchdf1, TempM, "location")
+Marchdf1 = merge(Marchdf1, state_population, "location") #Creating a data frame.
+Marchdf1 = mutate(Marchdf1, DeathPopRatio = TotalDeathsMarch/population)
+Marchdf1$state = state.abb[match(Marchdf1$location,state.name)]
+
+MarchTempD = ggscatter(Marchdf1, x = 'temperature', 'DeathPopRatio',
+                      add = "reg.line", conf.int = TRUE, label = "state",
+                      cor.coef = TRUE, cor.method = "pearson",
+                      xlab = "Temperature  (ºC)", ylab = "Deaths/Population Ratio",
+                      title="Deaths over population ratio of March in the U.S. versus temperature")
+
+#Month of April!
+April = states %>% group_by(month) %>% group_by(location) %>% 
+  filter(month == "202004")  #filtering states by April.  
+Aprildf = aggregate(April$positiveIncrease, 
+                    list(location = April$location), FUN = sum) #Aggregating the cases by April.
+Aprildf1 = aggregate(April$deathIncrease, 
+                     list(location = April$location), FUN = sum)
+Aprildf1 = merge(Aprildf, Aprildf1, "location")
+names(Aprildf1)[names(Aprildf1) == 'x.x' ]<- "TotalCasesApril"
+names(Aprildf1)[names(Aprildf1) == 'x.y' ]<- "TotalDeathsApril"
+TempA = Temp %>%  filter(month =="202004") #Temp by month.
+Aprildf1 = merge(Aprildf1, TempA, "location")
+Aprildf1 = merge(Aprildf1, state_population, "location") #Creating a data frame.
+Aprildf1 = mutate(Aprildf1, DeathPopRatio = TotalDeathsApril/population)
+Aprildf1$state = state.abb[match(Aprildf1$location,state.name)]
+
+
+AprilTempD = ggscatter(Aprildf1, x = 'temperature', y ='DeathPopRatio',
+                      add = "reg.line", conf.int = TRUE, label = "state",
+                      cor.coef = TRUE, cor.method = "pearson",
+                      xlab = "Temperature  (ºC)", ylab = "Deaths/Population Ratio",
+                      title="Deaths over population ratio of April in the U.S. versus temperature")
+
+
+#Month of May!
+May = states %>% group_by(month) %>% group_by(location) %>% 
+  filter(month == "202005")  #filtering states by May.  
+Maydf = aggregate(May$positiveIncrease, 
+                  list(location = May$location), FUN = sum) #Aggregating the cases by May.
+Maydf1 = aggregate(May$deathIncrease, 
+                     list(location = May$location), FUN = sum)
+Maydf1 = merge(Maydf1, Maydf1, "location")
+names(Maydf1)[names(Maydf1) == 'x.x' ]<- "TotalCasesMay"
+names(Maydf1)[names(Maydf1) == 'x.y' ]<- "TotalDeathsMay"
+TempMay = Temp %>%  filter(month =="202005") #Temp by month.
+Maydf1 = merge(Maydf1, TempMay, "location") 
+Maydf1 = merge(Maydf1, state_population, "location") #Creating a data frame.
+Maydf1 = mutate(Maydf1, DeathPopRatio = TotalDeathsMay/population)
+Maydf1$state = state.abb[match(Maydf1$location,state.name)]
+
+
+MayTempD = ggscatter(Maydf1, x = 'temperature', y ='DeathPopRatio',
+                    add = "reg.line", conf.int = TRUE, label = "state",
+                    cor.coef = TRUE, cor.method = "pearson",
+                    xlab = "Temperature  (ºC)", ylab = "Deaths/Population Ratio",
+                    title="Deaths over population ratio of May in the U.S. versus temperature")
+
+
+
+ggarrange(MarchTempD, AprilTempD, MayTempD)
+
+#### deaths/pop vs. GDP ----
+
+#Month of March! 
+March = states %>% group_by(month) %>% group_by(location) %>% 
+  filter(month == "202003")  #filtering states by March.  
+Marchdf = aggregate(March$positiveIncrease, 
+                    list(location = March$location), FUN = sum) #Aggregating the cases by March.
+Marchdf1 = aggregate(March$deathIncrease, 
+                     list(location = March$location), FUN = sum)
+Marchgdp1 = merge(Marchdf, Marchdf1, "location")
+names(Marchgdp1)[names(Marchgdp1) == 'x.x' ]<- "TotalCasesMarch"
+names(Marchgdp1)[names(Marchgdp1) == 'x.y' ]<- "TotalDeathsMarch"
+Marchgdp1 = merge(Marchgdp1, state_population, "location") #Creating a data frame.
+Marchgdp1 = mutate(Marchgdp1, DeathsPopRatio = TotalDeathsMarch/population)
+Marchgdp1 = merge(Marchgdp1, GDP , "location") #Creating a data frame.
+Marchgdp1 = as.tibble(Marchgdp1)
+Marchgdp1$state = state.abb[match(Marchgdp1$location,state.name)]
+Marchgdp1 = mutate(Marchgdp1, GDPper_capita = gdp/population)
+
+MarchGDPD = Marchgdp1 %>% 
+  ggscatter('GDPper_capita', 'DeathsPopRatio',  
+            add = "reg.line", conf.int = TRUE, label = "state",
+            cor.coef = TRUE, cor.method = "pearson",
+            xlab = "GDP per capita", ylab = "Deaths/Population Ratio",
+            title="Deaths overpopulation ratio of March in the U.S. vs. GDP") 
+
+
+#Month of April! 
+April = states %>% group_by(month) %>% group_by(location) %>% 
+  filter(month == "202004")  #filtering states by April.  
+Aprilgdp = aggregate(April$positiveIncrease, 
+                     list(location = April$location), FUN = sum) #Aggregating the cases by March.
+Aprildf1 = aggregate(April$deathIncrease, 
+                     list(location = April$location), FUN = sum)
+Aprilgdp1 = merge(Aprilgdp, Aprildf1, "location")
+names(Aprilgdp1)[names(Aprilgdp1) == 'x.x' ]<- "TotalCasesApril"
+names(Aprilgdp1)[names(Aprilgdp1) == 'x.y' ]<- "TotalDeathsApril"
+Aprilgdp1 = merge(Aprilgdp1, state_population, "location") #Creating a data frame.
+Aprilgdp1 = mutate(Aprilgdp1, DeathsPopRatio = TotalDeathsApril/population)
+Aprilgdp1 = merge(Aprilgdp1, GDP , "location") #Creating a data frame.
+Aprilgdp1 = as.tibble(Aprilgdp1)
+Aprilgdp1$state = state.abb[match(Aprilgdp1$location,state.name)]
+Aprilgdp1 = mutate(Aprilgdp1, GDPper_capita = gdp/population)
+
+AprilGDPD = Aprilgdp1 %>%
+  ggscatter('GDPper_capita', 'DeathsPopRatio', 
+            add = "reg.line", conf.int = TRUE, label = "state",
+            cor.coef = TRUE, cor.method = "pearson",
+            xlab = "GDP per capita", ylab = "Deaths/Population Ratio",
+            title="Deaths over population ratio of April in the U.S. vs. GDP") 
+
+
+#Month of May! 
+May= states %>% group_by(month) %>% group_by(location) %>% 
+  filter(month == "202005")  #filtering states by March.  
+Maygdp = aggregate(May$positiveIncrease, 
+                   list(location = May$location), FUN = sum) #Aggregating the cases by March.
+Maydf1 = aggregate(May$deathIncrease, 
+                   list(location = May$location), FUN = sum)
+Maygdp1 = merge(Maygdp, Maydf1, "location")
+names(Maygdp1)[names(Maygdp1) == 'x.x' ]<- "TotalCasesMay"
+names(Maygdp1)[names(Maygdp1) == 'x.y' ]<- "TotalDeathsMay"
+Maygdp1 = merge(Maygdp1, state_population, "location") #Creating a data frame.
+Maygdp1 = mutate(Maygdp1, DeathsPopRatio = TotalDeathsMay/population)
+Maygdp1 = merge(Maygdp1, GDP , "location") #Creating a data frame.
+Maygdp1 = as.tibble(Maygdp1)
+Maygdp1$state = state.abb[match(Maygdp1$location,state.name)]
+Maygdp1 = mutate(Maygdp1, GDPper_capita = gdp/population)
+
+MayGDPD = Maygdp1 %>% 
+  ggscatter('GDPper_capita', 'DeathsPopRatio', 
+            add = "reg.line", conf.int = TRUE, label = "state", 
+            cor.coef = TRUE, cor.method = "pearson",  
+            xlab = "GDP", ylab = "Deaths/Population Ratio",
+            title="Deaths over population ratio of May in the U.S. vs. GDP") 
+
+ggarrange(MarchGDPD, AprilGDPD, MayGDPD)
+
+
+#### [log(deaths/pop) vs Temp] ----
+
+
+Marchdf1[,7] = log(Marchdf1[,7])
+Aprildf1[,7] = log(Aprildf1[,7])
+Maydf1[,7] = log(Maydf1[,7])
+
+Marchdf1[,5] = (Marchdf1[,5] - 32)*5/9
+Aprildf1[,5] = (Aprildf1[,5] - 32)*5/9
+Maydf1[,5] = (Maydf1[,5] - 32)*5/9
+
+
+#Month of March!
+MarchTempLogD =   ggscatter(Marchdf1,'temperature', 'DeathPopRatio',
+                           add = "reg.line", conf.int = TRUE, label = 'state', 
+                           cor.coef = TRUE, cor.method = "pearson", 
+                           xlim = c(-2, 23), ylim = c(-14, -7),
+                           xlab = "Temperature (ºC)", ylab = "Log(deaths/ population)",
+                           title="Log(deaths/ population) on March in the U.S. vs. temperature")
+
+#Month of April!
+
+AprilTempLogD = ggscatter(Aprildf1, x = 'temperature', y ='DeathPopRatio',
+                         add = "reg.line", conf.int = TRUE, label = 'state', 
+                         cor.coef = TRUE, cor.method = "pearson", 
+                         xlim = c(-2, 23), ylim = c(-14, -7),
+                         xlab = "Temperature (ºC)", ylab = "Log(deaths/ population)",
+                         title=  "Log(deaths/ population) on April in the U.S. vs. temperature")
+
+
+#Month of May! 
+
+MayTempLogD = ggscatter(Maydf1, x = 'temperature', y ='DeathPopRatio',
+                       add = "reg.line", conf.int = TRUE, label = 'state', 
+                       cor.coef = TRUE, cor.method = "pearson",
+                       xlim = c(-2, 23), ylim = c(-14, -7), 
+                       xlab = "Temperature (ºC)", ylab = "Log(deaths/ population)",
+                       title="Log(deaths/ population) on May in the U.S. vs. temperature")
+
+ggarrange(MarchTempLogD, AprilTempLogD, MayTempLogD)
+
+
+
+#### [log(deaths/pop) vs GDP] ----
+
+
+Marchgdp1[,5] = log(Marchgdp1[,5])
+Aprilgdp1[,5] = log(Aprilgdp1[,5])
+Maygdp1[,5] = log(Maygdp1[,5])
+
+#Month of March!
+MarchGDPLogD = Marchgdp1 %>% 
+  ggscatter('GDPper_capita', 'DeathsPopRatio',  
+            add = "reg.line", conf.int = TRUE, label = 'state',
+            cor.coef = TRUE, cor.method = "pearson", ylim = c(-15, -6), 
+            xlab = "GDP per capita", ylab = "Log(Deaths/Population)",
+            title="Log(Deaths/population) in March in the U.S. vs. GDP per capita") 
+
+
+#Month of April! 
+
+AprilGDPLogD = Aprilgdp1 %>%
+  ggscatter('GDPper_capita', 'DeathsPopRatio', 
+            add = "reg.line", conf.int = TRUE,label = 'state',
+            cor.coef = TRUE, cor.method = "pearson", ylim = c(-15, -6), 
+            xlab = "GDP per capita", ylab = "Log(Deaths/Population)",
+            title="Log(Deaths/population)in April in the U.S. vs. GDP per capita ") 
+
+
+#Month of May! 
+
+MayGDPLogD = Maygdp1 %>% 
+  ggscatter('GDPper_capita', 'DeathsPopRatio', 
+            add = "reg.line", conf.int = TRUE, label = 'state',
+            cor.coef = TRUE, cor.method = "pearson",ylim = c(-15, -6), 
+            xlab = "GDP per capita", ylab = "Log(Deaths/Population)",
+            title="Log(Deaths/population)  in May in the U.S. vs. GDP per capita") 
+
+
+
+ggarrange(MarchGDPLogD, AprilGDPLogD, MayGDPLogD)
+
+
